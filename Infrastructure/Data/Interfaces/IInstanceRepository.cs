@@ -1,0 +1,15 @@
+using MediHub.Domain.DTOs;
+using MediHub.Domain.Models;
+
+namespace MediHub.Infrastructure.Data.Interfaces
+{
+    public interface IInstanceRepository
+    {
+        Task<int> Create(Instance s);
+        Task<int> Delete(int id);
+        Task<int> Update(Instance s);
+        Task<IEnumerable<Instance>> GetAll();
+        Task<Instance> GetById(int id);
+        
+    }
+}
