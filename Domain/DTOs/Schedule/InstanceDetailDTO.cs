@@ -16,11 +16,11 @@ namespace MediHub.Domain.DTOs
         public string? SubspecialtyName { get; set; }
         
         public string? FacilityName { get; set; }
-        public int? TheatreId { get; set; }
-        public string? TheatreName { get; set; }
+        public int? AssetId { get; set; }
+        public string? AssetName { get; set; }
         public DateTime? StartDateTime { get; set; }
         public DateTime? EndDateTime { get; set; }
 
-        public Staff[]? Staffs { get; set; }
+        public StaffDTO[]? Staffs { get; set; }
     }
 }

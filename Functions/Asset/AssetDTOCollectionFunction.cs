@@ -5,34 +5,34 @@ using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
-namespace MediHub.Functions.Theatre;
+namespace MediHub.Functions.Asset;
 
-public class TheatreDTOCollectionFunction
+public class AssetDTOCollectionFunction
 {
-    private readonly ITheatreService _theatreService;
+    private readonly IAssetService _assetService;
 
-    public TheatreDTOCollectionFunction(ITheatreService theatreService)
+    public AssetDTOCollectionFunction(IAssetService assetService)
     {
-        _theatreService = theatreService;
+        _assetService = assetService;
     }
 
-    [Function("TheatreDTOCollection")]
+    [Function("AssetDTOCollection")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "options",
-            Route = "theatre/details")] HttpRequestData req,
+            Route = "asset/details")] HttpRequestData req,
         FunctionContext context)
     {
-        var log = context.GetLogger("TheatreDTOCollection");
+        var log = context.GetLogger("AssetDTOCollection");
 
-        // GET /theatre
+        // GET /asset
         if (req.Method == "GET")
         {
-            var theatre = await _theatreService.GetAllDTO();
+            var asset = await _assetService.GetAllDTO();
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(theatre);
+            await ok.WriteAsJsonAsync(asset);
             return ok;
         }
         

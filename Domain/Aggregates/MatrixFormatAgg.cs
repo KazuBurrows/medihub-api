@@ -14,29 +14,29 @@ namespace MediHub.Domain.DTOs
     {
         public int FacilityId { get; }
         public string FacilityName { get; }
-        public IReadOnlyList<TheatreFormat> Theatres { get; }
+        public IReadOnlyList<AssetFormat> Assets { get; }
 
         public FacilityFormat(
             int facilityId,
             string facilityName,
-            IEnumerable<TheatreFormat> theatres)
+            IEnumerable<AssetFormat> assets)
         {
             FacilityId = facilityId;
             FacilityName = facilityName;
-            Theatres = theatres.ToList();
+            Assets = assets.ToList();
         }
     }
 
-    public sealed class TheatreFormat
+    public sealed class AssetFormat
     {
-        public int TheatreId { get; }
-        public string TheatreName { get; }
+        public int AssetId { get; }
+        public string AssetName { get; }
         public int SortOrder { get; }
 
-        public TheatreFormat(int theatreId, string theatreName, int sortOrder)
+        public AssetFormat(int assetId, string assetName, int sortOrder)
         {
-            TheatreId = theatreId;
-            TheatreName = theatreName;
+            AssetId = assetId;
+            AssetName = assetName;
             SortOrder = sortOrder;
         }
     }
@@ -46,9 +46,9 @@ namespace MediHub.Domain.DTOs
         public int FacilityId { get; init; }
         public string FacilityName { get; init; }
 
-        public int TheatreId { get; init; }
-        public string TheatreName { get; init; }
-        public int TheatreSortOrder { get; init; }
+        public int AssetId { get; init; }
+        public string AssetName { get; init; }
+        public int AssetSortOrder { get; init; }
     }
 
 

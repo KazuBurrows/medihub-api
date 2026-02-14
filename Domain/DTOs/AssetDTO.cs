@@ -2,13 +2,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MediHub.Domain.DTOs
 {
-    public class TheatreDTO
+    public class AssetDTO
     {
         public int Id { get; set; }
-        public string? TheatreName { get; set; }
+        public string? AssetName { get; set; }
 
-        [Column("scope_theatre_code")]
-        public int? ScopeTheatreCode { get; set; }
+        [Column("scope_asset_code")]
+        public int? ScopeAssetCode { get; set; }
         public int? Pediatric { get; set; }
 
         public string? FacilityName { get; set; }

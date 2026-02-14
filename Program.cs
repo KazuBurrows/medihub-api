@@ -22,7 +22,10 @@ builder.Services
     .ConfigureFunctionsApplicationInsights();
 
 // Configuration
-// builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+// builder.Configuration
+//        .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+//        .AddEnvironmentVariables();
+
 
 builder.Services.Configure<JsonSerializerOptions>(options =>
 {
@@ -66,8 +69,10 @@ builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<ISubspecialtyRepository, SubspecialtyRepository>();
 builder.Services.AddScoped<ISubspecialtyService, SubspecialtyService>();
 
-builder.Services.AddScoped<ITheatreRepository, TheatreRepository>();
-builder.Services.AddScoped<ITheatreService, TheatreService>();
+builder.Services.AddScoped<IAssetRepository, AssetRepository>();
+builder.Services.AddScoped<IAssetService, AssetService>();
 
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 
 builder.Build().Run();

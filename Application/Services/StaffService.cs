@@ -37,6 +37,11 @@ namespace MediHub.Application.Services
         {
             return await _repository.GetById(id);
         }
+
+        public async Task<Staff> GetByEmail(string email)
+        {
+            return await _repository.GetByEmail(email);
+        }
     }
 }
 

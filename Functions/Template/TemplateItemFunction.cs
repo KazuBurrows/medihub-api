@@ -28,13 +28,22 @@ public class TemplateItemFunction
         FunctionContext context)
     {
         var log = context.GetLogger("TemplateItem");
+
+        var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+    
+        if (!bool.TryParse(query["force"], out var force))
+            return await HttpResponses.BadRequest(req, "Invalid or missing force");
         
         // POST
         if (req.Method == "POST")
         {
             DateOnly date = DateOnly.Parse(dateStr, CultureInfo.InvariantCulture);
 
-            await _templateService.ApplyTemplate(date);
+            var res = await _templateService.ApplyTemplate(date, force);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(res);
+            return response;
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

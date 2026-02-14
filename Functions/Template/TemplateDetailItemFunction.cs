@@ -3,6 +3,7 @@ using System.Net;
 using MediHub.Application.Interfaces;
 using MediHub.Domain.DTOs;
 using MediHub.Functions.Helpers;
+using MediHub.Functions.Helpers.Exceptions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
@@ -48,8 +49,8 @@ public class TemplateDetailItemFunction
         if (!int.TryParse(query["sessionId"], out var sessionId))
             return await HttpResponses.BadRequest(req, "Invalid or missing sessionId");
 
-        if (!int.TryParse(query["theatreId"], out var theatreId))
-            return await HttpResponses.BadRequest(req, "Invalid or missing theatreId");
+        if (!int.TryParse(query["assetId"], out var assetId))
+            return await HttpResponses.BadRequest(req, "Invalid or missing assetId");
 
         if (!int.TryParse(query["week"], out var week))
             return await HttpResponses.BadRequest(req, "Invalid or missing week");
@@ -64,6 +65,8 @@ public class TemplateDetailItemFunction
         if (!TimeSpan.TryParseExact(query["endTime"], @"hh\:mm", CultureInfo.InvariantCulture, out var endTime))
             return await HttpResponses.BadRequest(req, "Invalid or missing endTime");
 
+        if (!bool.TryParse(query["force"], out var force))
+            return await HttpResponses.BadRequest(req, "Invalid or missing force");
 
         // Optional staff IDs
         var staffIds = query.GetValues("staffs")?
@@ -79,12 +82,18 @@ public class TemplateDetailItemFunction
         if (req.Method == "PUT")
         {
             instance = await _templateService.PutTemplateDetailDTO(
-                id, sessionId, theatreId, week, dayOfWeekByte, startTime, endTime, staffIds);
+                id, sessionId, assetId, week, dayOfWeekByte, startTime, endTime, force);
         }
         else if (req.Method == "POST")
         {
-            instance = await _templateService.CreateTemplateDetailDTO(
-                sessionId, theatreId, week, dayOfWeekByte, startTime, endTime, staffIds);
+            try {
+                instance = await _templateService.CreateTemplateDetailDTO(
+                    sessionId, assetId, week, dayOfWeekByte, startTime, endTime, force);
+            }
+            catch (TemplateClashException ex)
+            {
+                return await HttpResponses.Conflict(req, ex.Message);
+            }
         }
 
         if (instance == null)

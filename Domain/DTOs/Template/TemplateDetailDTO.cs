@@ -16,8 +16,8 @@ namespace MediHub.Domain.DTOs
         public string? SubspecialtyName { get; set; }
 
         public string? FacilityName { get; set; }
-        public int TheatreId { get; set; }
-        public string? TheatreName { get; set; }
+        public int AssetId { get; set; }
+        public string? AssetName { get; set; }
 
         /// <summary>
         /// Week number in the rotation (e.g., Week 1, Week 2)
@@ -32,9 +32,7 @@ namespace MediHub.Domain.DTOs
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
 
-        public bool IsActive { get; set; }
-
-        public Staff[]? Staffs { get; set; }
+        public bool IsOpen { get; set; }
 
     }
 }

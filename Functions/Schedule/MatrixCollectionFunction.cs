@@ -24,12 +24,12 @@ public class MatrixCollectionFunction
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "options",
-            Route = "schedule/matrix/{year:int?}/{week:int?}/{facility:int?}/{theatre:int?}")]
+            Route = "schedule/matrix/{year:int?}/{week:int?}/{facility:int?}/{asset:int?}")]
         HttpRequestData req,
         int? year,
         int? week,
         int? facility,
-        int? theatre,
+        int? asset,
         FunctionContext context)
     {
         var log = context.GetLogger("MatrixCollection");
@@ -39,14 +39,14 @@ public class MatrixCollectionFunction
 
         week ??= WeekHelper.GetCurrentWeekOfYear((int)year);
 
-        // facility/theatre null means "all"
+        // facility/asset null means "all"
         int? facilityId = facility.HasValue && facility.Value > 0 ? facility.Value : null;
-        int? theatreId = theatre.HasValue && theatre.Value > 0 ? theatre.Value : null;
+        int? assetId = asset.HasValue && asset.Value > 0 ? asset.Value : null;
 
         // --- GET endpoint ---
         if (req.Method == "GET")
         {
-            var schedule = await _scheduleService.GetMatrix(year.Value, week.Value, facilityId, theatreId);
+            var schedule = await _scheduleService.GetMatrix(year.Value, week.Value, facilityId, assetId);
 
             if (schedule == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);

@@ -1,11 +1,11 @@
 namespace MediHub.Domain.DTOs
 {
-    public class TemplateMatrixDTO
+    public class TemplateScheduleDTO
     {
         public int Id { get; set; }
 
         public string? FacilityName { get; set; }
-        public string? TheatreName { get; set; }
+        public string? AssetName { get; set; }
         public string? SessionName { get; set; }
 
         public int? IsAcute { get; set; }
@@ -20,6 +20,6 @@ namespace MediHub.Domain.DTOs
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
 
-        public bool IsActive { get; set; }
+        public bool IsOpen { get; set; }
     }
 }

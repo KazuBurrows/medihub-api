@@ -8,12 +8,15 @@ namespace MediHub.Infrastructure.Data
         
         public async Task<SqlConnection> GetOpenConnectionAsync()
         {
-            
+            var connectionString = "Server=s-cdhb.database.windows.net;Database=TheatreSchedule;User ID=testuser;Password=P@ssword123!;Encrypt=True;TrustServerCertificate=True;Connect Timeout=30;Max Pool Size=50;";
+
 
             // Build connection
             var conn = new SqlConnection(
-                "Server=tcp:s-cdhb.database.windows.net,1433;Initial Catalog=TheatreSchedule;Encrypt=True;TrustServerCertificate=True;Connection Timeout=60;Authentication=Active Directory Default;"
+                connectionString
             );
+
+
 
             await conn.OpenAsync();
             return conn;

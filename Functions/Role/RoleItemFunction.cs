@@ -5,53 +5,53 @@ using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
-namespace MediHub.Functions.Theatre;
+namespace MediHub.Functions.Role;
 
-public class TheatreItemFunction
+public class RoleItemFunction
 {
-    private readonly ITheatreService _theatreService;
+    private readonly IRoleService _roleService;
 
-    public TheatreItemFunction(ITheatreService theatreService)
+    public RoleItemFunction(IRoleService roleService)
     {
-        _theatreService = theatreService;
+        _roleService = roleService;
     }
 
-    [Function("TheatreItem")]
+    [Function("RoleItem")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
-            Route = "theatre/{id}")] HttpRequestData req,
+            Route = "role/{id}")] HttpRequestData req,
         string id,
         FunctionContext context)
     {
-        var log = context.GetLogger("TheatreItem");
+        var log = context.GetLogger("RoleItem");
         
         // Validate ID safely
-        if (!int.TryParse(id, out var theatreId))
+        if (!int.TryParse(id, out var roleId))
         {
             var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid theatre id.");
+            await bad.WriteStringAsync("Invalid role id.");
             return bad;
         }
 
-        // GET /theatre/{id}
+        // GET /role/{id}
         if (req.Method == "GET")
         {
-            var theatre = await _theatreService.GetById(theatreId);
+            var role = await _roleService.GetById(roleId);
 
-            if (theatre == null)
+            if (role == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(theatre);
+            await ok.WriteAsJsonAsync(role);
             return ok;
         }
 
-        // DELETE /theatre/{id}
+        // DELETE /role/{id}
         if (req.Method == "DELETE")
         {
-            var deleted = await _theatreService.Delete(theatreId);
+            var deleted = await _roleService.Delete(roleId);
 
             if (deleted == 0)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -59,16 +59,16 @@ public class TheatreItemFunction
             return req.CreateResponse(HttpStatusCode.NoContent);
         }
 
-        // PUT /theatre/{id}
+        // PUT /role/{id}
         if (req.Method == "PUT")
         {
-            var (data, errorResponse) = await req.ReadJsonBodyAsync<Domain.Models.Theatre>();
+            var (data, errorResponse) = await req.ReadJsonBodyAsync<Domain.Models.Role>();
 
             if (errorResponse != null)
                 return errorResponse;
 
             // OPTIONAL: Validate body ID if it exists
-            if (data!.Id != 0 && data.Id != theatreId)
+            if (data!.Id != 0 && data.Id != roleId)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                 await bad.WriteStringAsync(
@@ -78,9 +78,9 @@ public class TheatreItemFunction
             }
 
             // Force route ID to be authoritative
-            data.Id = theatreId;
+            data.Id = roleId;
 
-            var updated = await _theatreService.Update(data);
+            var updated = await _roleService.Update(data);
 
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);

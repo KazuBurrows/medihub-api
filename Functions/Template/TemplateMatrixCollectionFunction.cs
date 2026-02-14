@@ -24,24 +24,24 @@ public class TemplateMatrixCollectionFunction
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "options",
-            Route = "template/matrix/{week:int?}/{facility:int?}/{theatre:int?}")]
+            Route = "template/matrix/{week:int?}/{facility:int?}/{asset:int?}")]
         HttpRequestData req,
         int? week,
         int? facility,
-        int? theatre,
+        int? asset,
         FunctionContext context)
     {
         var log = context.GetLogger("TemplateMatrixCollection");
 
-        // facility/theatre null means "all"
+        // facility/asset null means "all"
         int? facilityId = facility.HasValue && facility.Value > 0 ? facility.Value : null;
-        int? theatreId = theatre.HasValue && theatre.Value > 0 ? theatre.Value : null;
+        int? assetId = asset.HasValue && asset.Value > 0 ? asset.Value : null;
         week ??= 1;
 
         // --- GET endpoint ---
         if (req.Method == "GET")
         {
-            var template = await _templateService.GetMatrix(week.Value, facilityId, theatreId);
+            var template = await _templateService.GetMatrix(week.Value, facilityId, assetId);
 
             if (template == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);

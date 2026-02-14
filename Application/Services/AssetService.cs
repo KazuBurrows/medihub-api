@@ -5,16 +5,16 @@ using MediHub.Infrastructure.Data.Interfaces;
 
 namespace MediHub.Application.Services
 {
-    public class TheatreService : ITheatreService
+    public class AssetService : IAssetService
     {
-        private readonly ITheatreRepository _repository;
+        private readonly IAssetRepository _repository;
 
-        public TheatreService(ITheatreRepository repository)
+        public AssetService(IAssetRepository repository)
         {
             _repository = repository;
         }
 
-        public Task<int> Create(Theatre t)
+        public Task<int> Create(Asset t)
         {
             return _repository.Create(t);
         }
@@ -24,23 +24,23 @@ namespace MediHub.Application.Services
             return _repository.Delete(id);
         }
 
-        public Task<int> Update(Theatre t)
+        public Task<int> Update(Asset t)
         {
             return _repository.Update(t);
         }
 
-        public async Task<IEnumerable<Theatre>> GetAll()
+        public async Task<IEnumerable<Asset>> GetAll()
         {
             return await _repository.GetAll();
         }
 
-        public async Task<Theatre> GetById(int id)
+        public async Task<Asset> GetById(int id)
         {
             return await _repository.GetById(id);
         }
 
 
-        public Task<int> CreateAgg(TheatreAggregate t)
+        public Task<int> CreateAgg(AssetAggregate t)
         {
             return _repository.CreateAgg(t);
         }
@@ -50,27 +50,27 @@ namespace MediHub.Application.Services
             return _repository.DeleteAgg(id);
         }
 
-        public Task<int> UpdateAgg(TheatreAggregate t)
+        public Task<int> UpdateAgg(AssetAggregate t)
         {
             return _repository.UpdateAgg(t);
         }
 
-        public async Task<IEnumerable<TheatreAggregate>> GetAllAgg()
+        public async Task<IEnumerable<AssetAggregate>> GetAllAgg()
         {
             return await _repository.GetAllAgg();
         }
 
-        public async Task<TheatreAggregate> GetByIdAgg(int id)
+        public async Task<AssetAggregate> GetByIdAgg(int id)
         {
             return await _repository.GetByIdAgg(id);
         }
 
-        public async Task<IEnumerable<TheatreDTO>> GetAllDTO()
+        public async Task<IEnumerable<AssetDTO>> GetAllDTO()
         {
             return await _repository.GetAllDTO();
         }
 
-        public async Task<TheatreDTO> GetByIdDTO(int id)
+        public async Task<AssetDTO> GetByIdDTO(int id)
         {
             return await _repository.GetByIdDTO(id);
         }

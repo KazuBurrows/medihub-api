@@ -40,6 +40,11 @@ namespace MediHub.Application.Services
             return await _repository.GetById(id);
         }
 
+        public async Task<IEnumerable<ScheduleDTO>> GetAllByStaffId(int staffId)
+        {
+            return await _repository.GetAllByStaffId(staffId);
+        }
+
     }
 }
 

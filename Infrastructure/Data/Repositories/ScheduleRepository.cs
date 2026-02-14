@@ -26,8 +26,8 @@ namespace MediHub.Infrastructure.Data.Repositories
             const string sql = @"
                 SELECT
                     s.id AS Id,
-                    t.id AS TheatreId,
-                    t.name AS TheatreName,
+                    t.id AS AssetId,
+                    t.name AS AssetName,
                     f.id AS FacilityId,
                     f.name AS FacilityName,
                     se.id AS SessionId,
@@ -35,7 +35,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.start_datetime AS StartDateTime,
                     s.end_datetime AS EndDateTime
                 FROM dbo.instance s
-                LEFT JOIN dbo.theatre t ON s.theatre_id = t.id
+                LEFT JOIN dbo.asset t ON s.asset_id = t.id
                 LEFT JOIN dbo.facility f ON t.facility_id = f.id
                 LEFT JOIN dbo.session se ON s.session_id = se.id
                 WHERE s.start_datetime >= @Monday
@@ -52,8 +52,8 @@ namespace MediHub.Infrastructure.Data.Repositories
             const string sql = @"
                 SELECT
                     s.id AS Id,
-                    t.id AS TheatreId,
-                    t.name AS TheatreName,
+                    t.id AS AssetId,
+                    t.name AS AssetName,
                     f.id AS FacilityId,
                     f.name AS FacilityName,
                     se.id AS SessionId,
@@ -61,7 +61,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.start_datetime AS StartDateTime,
                     s.end_datetime AS EndDateTime
                 FROM dbo.instance s
-                LEFT JOIN dbo.theatre t ON s.theatre_id = t.id
+                LEFT JOIN dbo.asset t ON s.asset_id = t.id
                 LEFT JOIN dbo.facility f ON t.facility_id = f.id
                 LEFT JOIN dbo.session se ON s.session_id = se.id
                 WHERE s.start_datetime >= @Start
@@ -73,14 +73,14 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<IEnumerable<MatrixDTO>> GetMatrix(DateTime monday, DateTime sunday, int? facility, int? theatre)
+        public async Task<IEnumerable<ScheduleDTO>> GetMatrix(DateTime monday, DateTime sunday, int? facility, int? asset)
         {
-            // SQL query: join instances, sessions, theatres, facilities, staff
+            // SQL query: join instances, sessions, assets, facilities, staff
             const string sql = @"
                 SELECT
                     i.id AS Id,
                     f.name AS FacilityName,
-                    t.name AS TheatreName,
+                    t.name AS AssetName,
                     s.name AS SessionName,
                     s.is_acute AS IsAcute,
                     s.is_pediatric AS IsPediatric,
@@ -91,13 +91,13 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.end_datetime AS EndDateTime
                 FROM dbo.instance i
                 INNER JOIN dbo.session s ON i.session_id = s.id
-                INNER JOIN dbo.theatre t ON i.theatre_id = t.id
+                INNER JOIN dbo.asset t ON i.asset_id = t.id
                 INNER JOIN dbo.facility f ON t.facility_id = f.id
                 LEFT JOIN dbo.staff st ON s.surgeon_id = st.id
                 WHERE i.start_datetime >= @StartDate
                 AND i.end_datetime <= @EndDate
                 /**FACILITY_FILTER**/
-                /**THEATRE_FILTER**/
+                /**ASSET_FILTER**/
                 GROUP BY
                     i.id, f.name, t.name, s.name,
                     s.is_acute, s.is_pediatric, s.anaesthetic_type,
@@ -125,18 +125,18 @@ namespace MediHub.Infrastructure.Data.Repositories
                 dynamicSql = dynamicSql.Replace("/**FACILITY_FILTER**/", "");
             }
 
-            if (theatre.HasValue)
+            if (asset.HasValue)
             {
-                dynamicSql = dynamicSql.Replace("/**THEATRE_FILTER**/", "AND t.id = @Theatre");
-                parameters["Theatre"] = theatre.Value;
+                dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "AND t.id = @Asset");
+                parameters["Asset"] = asset.Value;
             }
             else
             {
-                dynamicSql = dynamicSql.Replace("/**THEATRE_FILTER**/", "");
+                dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "");
             }
 
             // Execute the query
-            return await QueryAsync<MatrixDTO>(dynamicSql, parameters);
+            return await QueryAsync<ScheduleDTO>(dynamicSql, parameters);
         }
 
         public async Task<MatrixFormatAgg> GetMatrixFormat(int facilityId)
@@ -145,10 +145,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                 SELECT
                     f.id   AS FacilityId,
                     f.name AS FacilityName,
-                    t.id   AS TheatreId,
-                    t.name AS TheatreName
+                    t.id   AS AssetId,
+                    t.name AS AssetName
                 FROM dbo.facility f
-                LEFT JOIN dbo.theatre t ON t.facility_id = f.id
+                LEFT JOIN dbo.asset t ON t.facility_id = f.id
                 WHERE (@FacilityId = 0 OR f.id = @FacilityId)
                 ORDER BY
                     f.name,
@@ -164,9 +164,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                 .Select(fg => new FacilityFormat(
                     fg.Key.FacilityId,
                     fg.Key.FacilityName,
-                    fg.Select(t => new TheatreFormat(
-                        t.TheatreId,
-                        t.TheatreName,
+                    fg.Select(t => new AssetFormat(
+                        t.AssetId,
+                        t.AssetName,
                         0   // no sort_order in schema (yet)
                     ))
                 ))
@@ -175,9 +175,9 @@ namespace MediHub.Infrastructure.Data.Repositories
             return new MatrixFormatAgg(facilities);
         }
 
-        public async Task<InstanceDetailDTO> GetInstanceDetailDTO(int instanceId)
+        public async Task<InstanceDetailDTO?> GetInstanceDetailDTO(int instanceId)
         {
-            // SQL: pull instance and session details + include SessionId and TheatreId
+            // ---------------- MAIN INSTANCE QUERY ----------------
             const string sql = @"
                 SELECT 
                     i.id AS Id,
@@ -189,14 +189,14 @@ namespace MediHub.Infrastructure.Data.Repositories
                     CONCAT(st.first_name, ' ', st.last_name) AS SurgeonName,
                     sp.name AS SpecialtyName,
                     sub.name AS SubspecialtyName,
-                    t.id AS TheatreId,
-                    t.name AS TheatreName,
+                    t.id AS AssetId,
+                    t.name AS AssetName,
                     f.name AS FacilityName,
                     i.start_datetime AS StartDateTime,
                     i.end_datetime AS EndDateTime
                 FROM dbo.instance i
                 INNER JOIN dbo.session s ON i.session_id = s.id
-                INNER JOIN dbo.theatre t ON i.theatre_id = t.id
+                INNER JOIN dbo.asset t ON i.asset_id = t.id
                 INNER JOIN dbo.facility f ON t.facility_id = f.id
                 LEFT JOIN dbo.staff st ON s.surgeon_id = st.id
                 LEFT JOIN dbo.specialty sp ON s.specialty_id = sp.id
@@ -204,26 +204,36 @@ namespace MediHub.Infrastructure.Data.Repositories
                 WHERE i.id = @InstanceId;
             ";
 
-            // Execute main query
-            var instance = (await QueryAsync<InstanceDetailDTO>(sql, new { InstanceId = instanceId }))
-                           .FirstOrDefault();
+            var instance = (await QueryAsync<InstanceDetailDTO>(
+                sql,
+                new { InstanceId = instanceId }
+            )).FirstOrDefault();
 
             if (instance == null)
-                return null!; // Or throw exception
+                return null;
 
-            // If you have multiple staff per instance (like a staff_instance table)
+            // ---------------- STAFF + ROLE QUERY ----------------
             const string staffSql = @"
                 SELECT 
                     st.id AS Id,
                     st.first_name AS FirstName,
-                    st.last_name AS LastName
-                FROM dbo.staff st
-                INNER JOIN dbo.instance_staff isf ON st.id = isf.staff_id
-                WHERE isf.instance_id = @InstanceId;
-
+                    st.last_name AS LastName,
+                    st.code AS Code,
+                    st.email AS Email,
+                    r.id AS RoleId,
+                    r.name AS RoleName
+                FROM dbo.instance_staff isf
+                LEFT JOIN dbo.staff st ON isf.staff_id = st.id
+                LEFT JOIN dbo.role r ON isf.role_id = r.id
+                WHERE isf.instance_id = @InstanceId
+                ORDER BY r.name, st.last_name;
             ";
 
-            var staff = await QueryAsync<Staff>(staffSql, new { InstanceId = instanceId });
+            var staff = await QueryAsync<StaffDTO>(
+                staffSql,
+                new { InstanceId = instanceId }
+            );
+
             instance.Staffs = staff.ToArray();
 
             return instance;
@@ -231,142 +241,152 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
 
+
         public async Task<InstanceDetailDTO> PutInstanceDetailDTO(
-            int id,
-            int sessionId,
-            int theatreId,
-            string startDatetime,
-            string endDatetime,
-            List<int> staffs,
-            bool force)
-        {
-            if (!DateTime.TryParse(startDatetime, out var start))
-                throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
+    int id,
+    int sessionId,
+    int assetId,
+    string startDatetime,
+    string endDatetime,
+    List<StaffDTO> staffs,
+    bool force)
+{
+    // Parse datetime
+    if (!DateTime.TryParse(startDatetime, out var start))
+        throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
 
-            if (!DateTime.TryParse(endDatetime, out var end))
-                throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
+    if (!DateTime.TryParse(endDatetime, out var end))
+        throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
 
-            /* ---------------- INSTANCE CLASH CHECK ---------------- */
-            var conflictMessage = await _schedulingClash.CheckForInstanceClashes(id, theatreId, start, end, staffs);
+    /* ---------------- INSTANCE CLASH CHECK ---------------- */
+    // var conflictMessage = await _schedulingClash.CheckForInstanceClashes(id, assetId, start, end, staffs);
+    // if (!force && conflictMessage != null)
+    //     throw new InstanceClashException(conflictMessage);
 
-            if (!force && conflictMessage != null)
-                throw new InstanceClashException(conflictMessage);
+    // Convert StaffDTO list into a TVP with both StaffId and RoleId
+    var staffTable = DataTransformer.ToStaffRoleTable(staffs);
+
+    const string sql = @"
+        BEGIN TRANSACTION;
+
+        -- Update instance
+        UPDATE dbo.instance
+        SET
+            session_id     = @SessionId,
+            asset_id       = @AssetId,
+            start_datetime = @StartDateTime,
+            end_datetime   = @EndDateTime
+        WHERE id = @Id;
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            ROLLBACK;
+            RETURN;
+        END
+
+        -- Delete staff no longer assigned
+        DELETE isf
+        FROM dbo.instance_staff isf
+        LEFT JOIN @StaffTable s
+            ON isf.staff_id = s.StaffId
+        WHERE isf.instance_id = @Id
+        AND s.StaffId IS NULL;
+
+        -- Insert new staff assignments (with role)
+        INSERT INTO dbo.instance_staff (instance_id, staff_id, role_id)
+        SELECT @Id, s.StaffId, s.RoleId
+        FROM @StaffTable s
+        LEFT JOIN dbo.instance_staff isf
+            ON isf.instance_id = @Id
+            AND isf.staff_id = s.StaffId
+        WHERE isf.id IS NULL;
+
+        COMMIT;
+    ";
+
+    var parameters = new
+    {
+        Id = id,
+        SessionId = sessionId,
+        AssetId = assetId,
+        StartDateTime = start,
+        EndDateTime = end,
+        StaffTable = staffTable.AsTableValuedParameter("dbo.StaffRoleList") // TVP with StaffId + RoleId
+    };
+
+    await ExecuteAsync(sql, parameters);
+
+    return await GetInstanceDetailDTO(id);
+}
 
 
-            const string sql = @"
-                BEGIN TRANSACTION;
-
-                UPDATE dbo.instance
-                SET
-                    session_id     = @SessionId,
-                    theatre_id     = @TheatreId,
-                    start_datetime = @StartDateTime,
-                    end_datetime   = @EndDateTime
-                WHERE id = @Id;
-
-                IF @@ROWCOUNT = 0
-                BEGIN
-                    ROLLBACK;
-                    RETURN;
-                END
-
-                DELETE isf
-                FROM dbo.instance_staff isf
-                LEFT JOIN @StaffIds s ON isf.staff_id = s.Id
-                WHERE isf.instance_id = @Id
-                AND s.Id IS NULL;
-
-                INSERT INTO dbo.instance_staff (instance_id, staff_id)
-                SELECT @Id, s.Id
-                FROM @StaffIds s
-                LEFT JOIN dbo.instance_staff isf
-                    ON isf.instance_id = @Id
-                AND isf.staff_id = s.Id
-                WHERE isf.id IS NULL;
-
-                COMMIT;
-            ";
-
-            var dt = DataTransformer.ToIntListTable(staffs);
-
-            var parameters = new
-            {
-                Id = id,
-                SessionId = sessionId,
-                TheatreId = theatreId,
-                StartDateTime = start,
-                EndDateTime = end,
-                StaffIds = dt.AsTableValuedParameter("dbo.IntList")
-            };
-
-            await ExecuteAsync(sql, parameters);
-
-            return await GetInstanceDetailDTO(id);
-        }
 
         public async Task<InstanceDetailDTO> CreateInstanceDetailDTO(
-            int sessionId,
-            int theatreId,
-            string startDatetime,
-            string endDatetime,
-            List<int> staffs,
-            bool force)
-        {
-            // Parse datetime
-            if (!DateTime.TryParse(startDatetime, out var start))
-                throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
+    int sessionId,
+    int assetId,
+    string startDatetime,
+    string endDatetime,
+    List<StaffDTO> staffs,
+    bool force)
+{
+    // Parse datetime
+    if (!DateTime.TryParse(startDatetime, out var start))
+        throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
 
-            if (!DateTime.TryParse(endDatetime, out var end))
-                throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
+    if (!DateTime.TryParse(endDatetime, out var end))
+        throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
 
-            // Check for instance time clashes
-            var conflictMessage = await _schedulingClash.CheckForInstanceClashes(null, theatreId, start, end, staffs);
+    // Optional: Check for instance time clashes
+    // var conflictMessage = await _schedulingClash.CheckForInstanceClashes(null, assetId, start, end, staffs);
+    // if (!force && conflictMessage != null)
+    //     throw new InstanceClashException(conflictMessage);
 
-            if (!force && conflictMessage != null)
-                throw new InstanceClashException(conflictMessage);
+    // Convert staffs to TVP with StaffId and RoleId
+    var staffTable = DataTransformer.ToStaffRoleTable(staffs);
 
-            // If no clashes or force=true, proceed with insert
-            const string sql = @"
-                BEGIN TRANSACTION;
+    const string sql = @"
+        BEGIN TRANSACTION;
 
-                INSERT INTO dbo.instance (session_id, theatre_id, start_datetime, end_datetime)
-                VALUES (@SessionId, @TheatreId, @StartDateTime, @EndDateTime);
+        INSERT INTO dbo.instance (session_id, asset_id, start_datetime, end_datetime)
+        VALUES (@SessionId, @AssetId, @StartDateTime, @EndDateTime);
 
-                DECLARE @NewId INT = SCOPE_IDENTITY();
+        DECLARE @NewId INT = SCOPE_IDENTITY();
 
-                INSERT INTO dbo.instance_staff (instance_id, staff_id)
-                SELECT @NewId, s.Id
-                FROM @StaffIds s;
+        -- Insert staff assignments with optional role
+        INSERT INTO dbo.instance_staff (instance_id, staff_id, role_id)
+        SELECT @NewId, s.StaffId, s.RoleId
+        FROM @StaffTable s;
 
-                COMMIT;
+        COMMIT;
 
-                SELECT @NewId AS Id;
-            ";
+        SELECT @NewId AS Id;
+    ";
 
-            var dt = DataTransformer.ToIntListTable(staffs);
-            var parameters = new
-            {
-                SessionId = sessionId,
-                TheatreId = theatreId,
-                StartDateTime = start,
-                EndDateTime = end,
-                StaffIds = dt.AsTableValuedParameter("dbo.IntList")
-            };
+    var parameters = new
+    {
+        SessionId = sessionId,
+        AssetId = assetId,
+        StartDateTime = start,
+        EndDateTime = end,
+        StaffTable = staffTable.AsTableValuedParameter("dbo.StaffRoleList") // TVP with StaffId + RoleId
+    };
 
-            var newId = (await QueryAsync<int>(sql, parameters)).First();
+    var newId = (await QueryAsync<int>(sql, parameters)).First();
 
-            return await GetInstanceDetailDTO(newId);
-        }
-
+    return await GetInstanceDetailDTO(newId);
+}
 
 
-        public async Task<IEnumerable<ListDTO>> GetList()
+
+
+
+        public async Task<IEnumerable<ScheduleDTO>> GetList()
         {
             const string sql = @"
                 SELECT
                     i.id AS Id,
                     f.name AS FacilityName,
-                    t.name AS TheatreName,
+                    t.name AS AssetName,
                     s.name AS SessionName,
                     s.is_acute AS IsAcute,
                     s.is_pediatric AS IsPediatric,
@@ -377,7 +397,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.end_datetime AS EndDateTime
                 FROM dbo.instance i
                 INNER JOIN dbo.session s ON i.session_id = s.id
-                INNER JOIN dbo.theatre t ON i.theatre_id = t.id
+                INNER JOIN dbo.asset t ON i.asset_id = t.id
                 INNER JOIN dbo.facility f ON t.facility_id = f.id
                 LEFT JOIN dbo.staff surgeon ON s.surgeon_id = surgeon.id
                 LEFT JOIN dbo.instance_staff ist ON ist.instance_id = i.id
@@ -400,7 +420,7 @@ namespace MediHub.Infrastructure.Data.Repositories
             var dynamicSql = sql;
 
             // Execute the query
-            return await QueryAsync<ListDTO>(dynamicSql);
+            return await QueryAsync<ScheduleDTO>(dynamicSql);
         }
 
     }

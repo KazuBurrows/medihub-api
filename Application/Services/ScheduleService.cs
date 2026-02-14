@@ -30,10 +30,10 @@ namespace MediHub.Application.Services
             return await _repository.GetAllDTO(start_datetime, end_datetime);
         }
 
-        public async Task<IEnumerable<MatrixDTO>> GetMatrix(int year, int week, int? facility, int? theatre)
+        public async Task<IEnumerable<ScheduleDTO>> GetMatrix(int year, int week, int? facility, int? asset)
         {
             var (monday, sunday) = WeekHelper.GetWeekDates(year, week);
-            return await _repository.GetMatrix(monday, sunday, facility, theatre);
+            return await _repository.GetMatrix(monday, sunday, facility, asset);
         }
 
         public async Task<MatrixFormatAgg> GetMatrixFormat(int facilityId)
@@ -46,17 +46,17 @@ namespace MediHub.Application.Services
             return await _repository.GetInstanceDetailDTO(instance);
         }
 
-        public async Task<InstanceDetailDTO> PutInstanceDetailDTO(int id, int sessionId, int theatreId, string startDatetime, string endDatetime, List<int> staffs, bool force)
+        public async Task<InstanceDetailDTO> PutInstanceDetailDTO(int id, int sessionId, int assetId, string startDatetime, string endDatetime, List<StaffDTO> staffs, bool force)
         {
-            return await _repository.PutInstanceDetailDTO(id, sessionId, theatreId, startDatetime, endDatetime, staffs, force);
+            return await _repository.PutInstanceDetailDTO(id, sessionId, assetId, startDatetime, endDatetime, staffs, force);
         }
 
-        public async Task<InstanceDetailDTO> CreateInstanceDetailDTO(int sessionId, int theatreId, string startDatetime, string endDatetime, List<int> staffs, bool force)
+        public async Task<InstanceDetailDTO> CreateInstanceDetailDTO(int sessionId, int assetId, string startDatetime, string endDatetime, List<StaffDTO> staffs, bool force)
         {
-            return await _repository.CreateInstanceDetailDTO(sessionId, theatreId, startDatetime, endDatetime, staffs, force);
+            return await _repository.CreateInstanceDetailDTO(sessionId, assetId, startDatetime, endDatetime, staffs, force);
         }
 
-        public async Task<IEnumerable<ListDTO>> GetList()
+        public async Task<IEnumerable<ScheduleDTO>> GetList()
         {
             return await _repository.GetList();
         }

@@ -3,6 +3,7 @@ using MediHub.Application.Interfaces;
 using MediHub.Infrastructure.Data;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Data.SqlClient;
 
 namespace MediHub.Functions.Schedule;
 

@@ -18,42 +18,27 @@ public class TemplateDTOCollectionFunction
         _templateService = templateService;
     }
 
-    // [Function("TemplateDTOCollection")]
-    // public async Task<HttpResponseData> Run(
-    //     [HttpTrigger(
-    //         AuthorizationLevel.Anonymous,
-    //         "get", "options",
-    //         Route = "template/details/{year:int?}/{week:int?}")] HttpRequestData req,
-    //         int? year,
-    //         int? week,
-    //         FunctionContext context)
-    // {
-    //     var log = context.GetLogger("TemplateDTOCollection");
+    [Function("TemplateDTOCollection")]
+    public async Task<HttpResponseData> Run(
+        [HttpTrigger(
+            AuthorizationLevel.Anonymous,
+            "get", "options",
+            Route = "template/list/details")] HttpRequestData req,
+            FunctionContext context)
+    {
+        var log = context.GetLogger("TemplateDTOCollection");
 
-    //     if (!year.HasValue)
-    //     {
-    //         year = DateTime.UtcNow.Year;
-    //     }
+        // GET /template
+        if (req.Method == "GET")
+        {
+            var ok = req.CreateResponse(HttpStatusCode.OK);
+            var templates = await _templateService.GetAllDTO();
+            await ok.WriteAsJsonAsync(templates);
 
-    //     // GET /template
-    //     if (req.Method == "GET")
-    //     {
-    //         var ok = req.CreateResponse(HttpStatusCode.OK);
-    //         if (!week.HasValue)
-    //         {
-    //             // return all templates for the year
-    //             var template = await _templateService.GetAllDTO(year.Value);
-    //             await ok.WriteAsJsonAsync(template);
-    //         } else
-    //         {
-    //             var template = await _templateService.GetMatrixByWeek(year.Value, week.Value);
-    //             await ok.WriteAsJsonAsync(template);
-    //         }
-
-    //         return ok;
-    //     }
+            return ok;
+        }
         
 
-    //     return req.CreateResponse(HttpStatusCode.MethodNotAllowed);
-    // }
+        return req.CreateResponse(HttpStatusCode.MethodNotAllowed);
+    }
 }

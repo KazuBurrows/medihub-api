@@ -8,7 +8,7 @@ namespace MediHub.Infrastructure.Data.Helpers
 
         public async Task<string?> CheckForInstanceClashes(
             int? instanceId,      // null for create
-            int theatreId,
+            int assetId,
             DateTime start,
             DateTime end,
             List<int> staffs)
@@ -17,7 +17,7 @@ namespace MediHub.Infrastructure.Data.Helpers
             const string clashCheckSql = @"
                 SELECT i.Id
                 FROM dbo.instance i
-                WHERE i.theatre_id = @TheatreId
+                WHERE i.asset_id = @AssetId
                 AND (@InstanceId IS NULL OR i.id <> @InstanceId)
                 AND i.start_datetime < @EndDateTime
                 AND i.end_datetime > @StartDateTime
@@ -25,7 +25,7 @@ namespace MediHub.Infrastructure.Data.Helpers
 
             var existingInstances = await QueryAsync<int>(clashCheckSql, new
             {
-                TheatreId = theatreId,
+                AssetId = assetId,
                 InstanceId = instanceId,
                 StartDateTime = start,
                 EndDateTime = end
@@ -73,6 +73,53 @@ namespace MediHub.Infrastructure.Data.Helpers
 
                 lines.Add("Conflicting staff: " + string.Join(", ", staffNames));
             }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        public async Task<string?> CheckForTemplateClashes(
+            int? templateId,     // null for create
+            int assetId,
+            int week,
+            byte dayOfWeek,
+            DateTime start,      // only time portion matters
+            DateTime end
+        )
+        {
+            var startTime = start.TimeOfDay;
+            var endTime = end.TimeOfDay;
+
+            /* ---------------- ASSET CLASH ---------------- */
+            const string assetClashSql = @"
+                SELECT t.id
+                FROM dbo.instance_template t
+                WHERE t.asset_id = @AssetId
+                AND t.week = @Week
+                AND t.day_of_week = @DayOfWeek
+                AND (@TemplateId IS NULL OR t.id <> @TemplateId)
+                AND t.start_time < @EndTime
+                AND t.end_time   > @StartTime
+            ";
+
+            var assetClashes = await QueryAsync<int>(assetClashSql, new
+            {
+                AssetId = assetId,
+                Week = week,
+                DayOfWeek = dayOfWeek,
+                TemplateId = templateId,
+                StartTime = startTime,
+                EndTime = endTime
+            });
+
+            /* ---------------- NO CLASH ---------------- */
+            if (!assetClashes.Any())
+                return null;
+
+            var lines = new List<string> { "Your template overlaps with existing schedule data." };
+
+            /* ---------------- ASSET DETAILS ---------------- */
+            if (assetClashes.Any())
+                lines.Add("Conflicting template IDs (asset clash): " + string.Join(", ", assetClashes));
 
             return string.Join(Environment.NewLine, lines);
         }

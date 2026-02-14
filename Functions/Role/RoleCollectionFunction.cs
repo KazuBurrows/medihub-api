@@ -5,53 +5,52 @@ using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
-namespace MediHub.Functions.Theatre;
+namespace MediHub.Functions.Role;
 
-public class TheatreCollectionFunction
+public class RoleCollectionFunction
 {
-    private readonly ITheatreService _theatreService;
+    private readonly IRoleService _roleService;
 
-    public TheatreCollectionFunction(ITheatreService theatreService)
+    public RoleCollectionFunction(IRoleService roleService)
     {
-        _theatreService = theatreService;
+        _roleService = roleService;
     }
 
-    [Function("TheatreCollection")]
+    [Function("RoleCollection")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "post", "options",
-            Route = "theatre")] HttpRequestData req,
+            Route = "role")] HttpRequestData req,
         FunctionContext context)
     {
-        var log = context.GetLogger("TheatreCollection");
+        var log = context.GetLogger("RoleCollection");
 
-        // GET /theatre
+        // GET /role
         if (req.Method == "GET")
         {
-            var theatre = await _theatreService.GetAll();
+            var role = await _roleService.GetAll();
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(theatre);
+            await ok.WriteAsJsonAsync(role);
             return ok;
         }
 
-        // POST /theatre
+        // POST /role
         if (req.Method == "POST")
         {
             var (data, errorResponse) =
-                await req.ReadJsonBodyAsync<Domain.Models.Theatre>();
+                await req.ReadJsonBodyAsync<Domain.Models.Role>();
 
             if (errorResponse != null)
                 return errorResponse;
 
-            var created = await _theatreService.Create(data!);
+            var created = await _roleService.Create(data!);
 
             var response = req.CreateResponse(HttpStatusCode.Created);
             await response.WriteAsJsonAsync(created);
             return response;
         }
-        
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);
     }

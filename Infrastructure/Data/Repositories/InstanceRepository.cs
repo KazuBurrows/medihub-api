@@ -13,7 +13,7 @@ namespace MediHub.Infrastructure.Data.Repositories
             const string sql = @"
                 SELECT 
                     id,
-                    theatre_id AS TheatreId,
+                    asset_id AS AssetId,
                     session_id AS SessionId,
                     start_datetime AS StartDatetime,
                     end_datetime AS EndDatetime
@@ -22,13 +22,50 @@ namespace MediHub.Infrastructure.Data.Repositories
             return await QueryAsync<Instance>(sql);
         }
 
+        public async Task<IEnumerable<ScheduleDTO>> GetAllByStaffId(int staffId)
+{
+    const string sql = @"
+        SELECT DISTINCT
+            i.id,
+            f.name AS FacilityName,
+            a.name AS AssetName,
+            s.name AS SessionName,
+            s.is_acute AS IsAcute,
+            s.is_pediatric AS IsPediatric,
+            s.anaesthetic_type AS AnaestheticType,
+            su.first_name + ' ' + su.last_name AS SurgeonName,
+            i.start_datetime AS StartDateTime,
+            i.end_datetime   AS EndDateTime
+        FROM dbo.instance i
+        INNER JOIN dbo.instance_staff isf
+            ON isf.instance_id = i.id
+        LEFT JOIN dbo.asset a
+            ON i.asset_id = a.id
+        LEFT JOIN dbo.facility f
+            ON a.facility_id = f.id
+        LEFT JOIN dbo.session s
+            ON i.session_id = s.id
+        LEFT JOIN dbo.staff su
+            ON s.surgeon_id = su.id
+        WHERE isf.staff_id = @StaffId
+        ORDER BY i.start_datetime";
+
+    return await QueryAsync<ScheduleDTO>(
+        sql,
+        new { StaffId = staffId }
+    );
+}
+
+
+
+
 
         public async Task<Instance?> GetById(int id)
         {
             const string sql = @"
                 SELECT 
                     id,
-                    theatre_id AS TheatreId,
+                    asset_id AS AssetId,
                     session_id AS SessionId,
                     start_datetime AS StartDatetime,
                     end_datetime AS EndDatetime
@@ -44,8 +81,8 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<int> Create(Instance i)
         {
             const string sql = @"
-                INSERT INTO dbo.instance (theatre_id, session_id, start_datetime, end_datetime)
-                VALUES (@TheatreId, @SessionId, @StartDatetime, @EndDatetime)";
+                INSERT INTO dbo.instance (asset_id, session_id, start_datetime, end_datetime)
+                VALUES (@AssetId, @SessionId, @StartDatetime, @EndDatetime)";
             return await ExecuteAsync(sql, i);
         }
 
@@ -54,7 +91,7 @@ namespace MediHub.Infrastructure.Data.Repositories
         {
             const string sql = @"
                 UPDATE dbo.instance
-                SET theatre_id = @TheatreId,
+                SET asset_id = @AssetId,
                     session_id = @SessionId,
                     start_datetime = @StartDatetime,
                     end_datetime = @EndDatetime

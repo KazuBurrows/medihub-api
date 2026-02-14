@@ -67,5 +67,26 @@ namespace MediHub.Infrastructure.Data.Repositories
             const string sql = "DELETE FROM dbo.staff WHERE id = @id";
             return await ExecuteAsync(sql, new { id });
         }
+
+        public async Task<Staff?> GetByEmail(string email)
+        {
+            const string sql = @"
+                SELECT TOP (1)
+                    id,
+                    first_name AS FirstName,
+                    last_name AS LastName,
+                    code,
+                    email
+                FROM dbo.staff
+                WHERE email = @Email
+                ORDER BY id";
+
+            return await QuerySingleOrDefaultAsync<Staff>(
+                sql,
+                new { Email = email }
+            );
+        }
+
+        
     }
 }

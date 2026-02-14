@@ -5,47 +5,47 @@ using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
-namespace MediHub.Functions.Theatre;
+namespace MediHub.Functions.Asset;
 
-public class TheatreAggCollectionFunction
+public class AssetAggCollectionFunction
 {
-    private readonly ITheatreService _theatreService;
+    private readonly IAssetService _assetService;
 
-    public TheatreAggCollectionFunction(ITheatreService theatreService)
+    public AssetAggCollectionFunction(IAssetService assetService)
     {
-        _theatreService = theatreService;
+        _assetService = assetService;
     }
 
-    [Function("TheatreAggCollection")]
+    [Function("AssetAggCollection")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "post", "options",
-            Route = "theatre/aggregate")] HttpRequestData req,
+            Route = "asset/aggregate")] HttpRequestData req,
         FunctionContext context)
     {
-        var log = context.GetLogger("TheatreAggCollection");
+        var log = context.GetLogger("AssetAggCollection");
 
-        // GET /theatre/aggregate
+        // GET /asset/aggregate
         if (req.Method == "GET")
         {
-            var theatre = await _theatreService.GetAllAgg();
+            var asset = await _assetService.GetAllAgg();
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(theatre);
+            await ok.WriteAsJsonAsync(asset);
             return ok;
         }
 
-        // POST /theatre/aggregate
+        // POST /asset/aggregate
         if (req.Method == "POST")
         {
             var (data, errorResponse) =
-                await req.ReadJsonBodyAsync<Domain.DTOs.TheatreAggregate>();
+                await req.ReadJsonBodyAsync<Domain.DTOs.AssetAggregate>();
 
             if (errorResponse != null)
                 return errorResponse;
 
-            var created = await _theatreService.CreateAgg(data!);
+            var created = await _assetService.CreateAgg(data!);
 
             var response = req.CreateResponse(HttpStatusCode.Created);
             await response.WriteAsJsonAsync(created);

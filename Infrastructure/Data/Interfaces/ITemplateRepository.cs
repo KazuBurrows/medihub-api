@@ -5,12 +5,13 @@ namespace MediHub.Infrastructure.Data.Interfaces
 {
     public interface ITemplateRepository
     {
-        Task<IEnumerable<TemplateMatrixDTO>> GetMatrix(int week, int? facility, int? theatre);
+        Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(int week, int? facility, int? asset);
         Task<TemplateMatrixFormatAgg> GetMatrixFormat(int facilityId);
         Task<TemplateDetailDTO> GetTemplateDetailDTO(int id);
-        Task<TemplateDetailDTO> PutTemplateDetailDTO(int id, int sessionId, int theatreId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, List<int> staffs);
-        Task<TemplateDetailDTO> CreateTemplateDetailDTO(int sessionId, int theatreId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, List<int> staffs);
+        Task<TemplateDetailDTO> PutTemplateDetailDTO(int id, int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool force);
+        Task<TemplateDetailDTO> CreateTemplateDetailDTO(int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool force);
         Task<int> Delete(int id);
-        Task ApplyTemplate(DateOnly date);
+        Task<string> ApplyTemplate(DateOnly date, bool force);
+        Task<IEnumerable<TemplateDetailDTO>> GetAllDTO();
     }
 }

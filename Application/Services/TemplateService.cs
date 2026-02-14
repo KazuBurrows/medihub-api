@@ -16,9 +16,9 @@ namespace MediHub.Application.Services
         }
 
 
-        public async Task<IEnumerable<TemplateMatrixDTO>> GetMatrix(int week, int? facility, int? theatre)
+        public async Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(int week, int? facility, int? asset)
         {
-            return await _repository.GetMatrix(week, facility, theatre);
+            return await _repository.GetMatrix(week, facility, asset);
         }
 
         public async Task<TemplateMatrixFormatAgg> GetMatrixFormat(int facilityId)
@@ -31,14 +31,14 @@ namespace MediHub.Application.Services
             return await _repository.GetTemplateDetailDTO(id);
         }
 
-        public async Task<TemplateDetailDTO> CreateTemplateDetailDTO(int sessionId, int theatreId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, List<int> staffs)
+        public async Task<TemplateDetailDTO> CreateTemplateDetailDTO(int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool force)
         {
-            return await _repository.CreateTemplateDetailDTO(sessionId, theatreId, week, dayOfWeek, starTime, endTime, staffs);
+            return await _repository.CreateTemplateDetailDTO(sessionId, assetId, week, dayOfWeek, starTime, endTime, force);
         }
 
-        public async Task<TemplateDetailDTO> PutTemplateDetailDTO(int id, int sessionId, int theatreId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, List<int> staffs)
+        public async Task<TemplateDetailDTO> PutTemplateDetailDTO(int id, int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool force)
         {
-            return await _repository.PutTemplateDetailDTO(id, sessionId, theatreId, week, dayOfWeek, starTime, endTime, staffs);
+            return await _repository.PutTemplateDetailDTO(id, sessionId, assetId, week, dayOfWeek, starTime, endTime, force);
         }
 
         public async Task<int> Delete(int id)
@@ -46,9 +46,14 @@ namespace MediHub.Application.Services
             return await _repository.Delete(id);
         }
 
-        public async Task ApplyTemplate(DateOnly date)
+        public async Task<string> ApplyTemplate(DateOnly date, bool force)
         {
-            await _repository.ApplyTemplate(date);
+            return await _repository.ApplyTemplate(date, force);
+        }
+
+        public async Task<IEnumerable<TemplateDetailDTO>> GetAllDTO()
+        {
+            return await _repository.GetAllDTO();
         }
     }
 }

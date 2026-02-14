@@ -5,39 +5,39 @@ using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
-namespace MediHub.Functions.Theatre;
+namespace MediHub.Functions.Asset;
 
-public class TheatreDTOItemFunction
+public class AssetDTOItemFunction
 {
-    private readonly ITheatreService _theatreService;
+    private readonly IAssetService _assetService;
 
-    public TheatreDTOItemFunction(ITheatreService theatreService)
+    public AssetDTOItemFunction(IAssetService assetService)
     {
-        _theatreService = theatreService;
+        _assetService = assetService;
     }
 
-    [Function("TheatreDTOItem")]
+    [Function("AssetDTOItem")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "options",
-            Route = "theatre/details/{id}")] HttpRequestData req,
+            Route = "asset/details/{id}")] HttpRequestData req,
         int id,
         FunctionContext context)
     {
-        var log = context.GetLogger("TheatreDTOItem");
+        var log = context.GetLogger("AssetDTOItem");
 
 
-        // GET /theatre/details/{id}
+        // GET /asset/details/{id}
         if (req.Method == "GET")
         {
-            var theatre = await _theatreService.GetByIdDTO(id);
+            var asset = await _assetService.GetByIdDTO(id);
 
-            if (theatre == null)
+            if (asset == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(theatre);
+            await ok.WriteAsJsonAsync(asset);
             return ok;
         }
 
