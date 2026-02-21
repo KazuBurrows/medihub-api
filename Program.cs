@@ -22,9 +22,9 @@ builder.Services
     .ConfigureFunctionsApplicationInsights();
 
 // Configuration
-// builder.Configuration
-//        .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-//        .AddEnvironmentVariables();
+builder.Configuration
+       .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+       .AddEnvironmentVariables();
 
 
 builder.Services.Configure<JsonSerializerOptions>(options =>

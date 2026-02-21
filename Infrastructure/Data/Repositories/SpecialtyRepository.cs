@@ -9,41 +9,66 @@ namespace MediHub.Infrastructure.Data.Repositories
 
         public async Task<IEnumerable<Specialty>> GetAll()
         {
-            return await QueryAsync<Specialty>("SELECT * FROM dbo.specialty");
+            const string sql = @"
+        SELECT
+            SPECIALTY_KEY AS Id,
+            SPECIALTY_CODE AS Code,
+            SPECIALTY_DESCRIPTION AS Description
+        FROM dbo.specialty";
+
+            return await QueryAsync<Specialty>(sql);
         }
+
 
 
         public async Task<Specialty?> GetById(int id)
         {
-            return await QuerySingleOrDefaultAsync<Specialty>(
-                "SELECT * FROM dbo.specialty WHERE id = @id",
-                new { id }
-            );
+            const string sql = @"
+        SELECT
+            SPECIALTY_KEY AS Id,
+            SPECIALTY_CODE AS Code,
+            SPECIALTY_DESCRIPTION AS Description
+        FROM dbo.specialty
+        WHERE SPECIALTY_KEY = @Id";
+
+            return await QuerySingleOrDefaultAsync<Specialty>(sql, new { Id = id });
         }
+
 
         public async Task<int> Create(Specialty s)
         {
             const string sql = @"
-                INSERT INTO dbo.specialty (name)
-                VALUES (@Name)";
-            return await ExecuteAsync(sql, s);
+        INSERT INTO dbo.specialty (SPECIALTY_CODE, SPECIALTY_DESCRIPTION)
+        OUTPUT INSERTED.SPECIALTY_KEY
+        VALUES (@Code, @Description)";
+
+            return await ExecuteScalarAsync<int>(sql, s);
         }
+
 
 
         public async Task<int> Update(Specialty s)
         {
             const string sql = @"
-                UPDATE dbo.specialty
-                SET name = @Name
-                WHERE id = @Id";
+        UPDATE dbo.specialty
+        SET
+            SPECIALTY_CODE = @Code,
+            SPECIALTY_DESCRIPTION = @Description
+        WHERE SPECIALTY_KEY = @Id";
+
             return await ExecuteAsync(sql, s);
         }
 
 
+
         public async Task<int> Delete(int id)
         {
-            const string sql = "DELETE FROM dbo.specialty WHERE id = @id";
-            return await ExecuteAsync(sql, new { id });
+            const string sql = @"
+        DELETE FROM dbo.specialty
+        WHERE SPECIALTY_KEY = @Id";
+
+            return await ExecuteAsync(sql, new { Id = id });
         }
+
     }
 }

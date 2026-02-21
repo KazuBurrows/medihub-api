@@ -7,11 +7,15 @@ namespace MediHub.Application.Interfaces
     {
         Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(int week, int? facility, int? asset);
         Task<TemplateMatrixFormatAgg> GetMatrixFormat(int facilityId);
-        Task<TemplateDetailDTO> GetTemplateDetailDTO(int id);
-        Task<TemplateDetailDTO> PutTemplateDetailDTO(int id, int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan startTime, TimeSpan endTime, bool force);
-        Task<TemplateDetailDTO> CreateTemplateDetailDTO(int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan startTime, TimeSpan endTime, bool force);
+        Task<TemplateDTO> GetByIdDTO(int id);
+        Task<TemplateDTO> PutTemplateDTO(int id, int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan startTime, TimeSpan endTime, bool force);
+        Task<TemplateDTO> CreateTemplateDTO(int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan startTime, TimeSpan endTime, bool force);
         Task<int> Delete(int id);
-        Task<string> ApplyTemplate(DateOnly date, bool force);
-        Task<IEnumerable<TemplateDetailDTO>> GetAllDTO();
+        // Task<string> ApplyTemplate(DateOnly date, bool force);
+        Task<IEnumerable<TemplateDTO>> GetAllDTO();
+
+        Task<Template> GetById(int id);
+        Task<int> Update(Template t);
+        Task<int> Create(Template t);
     }
 }

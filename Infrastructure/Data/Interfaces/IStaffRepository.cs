@@ -10,5 +10,7 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task<IEnumerable<Staff>> GetAll();
         Task<Staff> GetById(int id);
         Task<Staff> GetByEmail(string email);
+        Task<IEnumerable<StaffDTO>> GetAllDTO();
+        Task<StaffDTO> GetByIdDTO(int id);
     }
 }

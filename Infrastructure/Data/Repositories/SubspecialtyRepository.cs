@@ -10,56 +10,61 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<IEnumerable<Subspecialty>> GetAll()
         {
             const string sql = @"
-                SELECT 
-                    id,
-                    code,
-                    name AS Name
-                FROM dbo.subspecialty";
+        SELECT
+            SUBSPECIALTY_KEY AS Id,
+            SUBSPECIALTY_NAME AS Name
+        FROM dbo.subspecialty";
 
             return await QueryAsync<Subspecialty>(sql);
         }
 
 
+
         public async Task<Subspecialty?> GetById(int id)
         {
             const string sql = @"
-                SELECT 
-                    id,
-                    code,
-                    name AS Name
+                SELECT
+                    SUBSPECIALTY_KEY AS Id,
+                    SUBSPECIALTY_NAME AS Name
                 FROM dbo.subspecialty
-                WHERE id = @id";
+                WHERE SUBSPECIALTY_KEY = @Id";
 
-            return await QuerySingleOrDefaultAsync<Subspecialty>(
-                sql,
-                new { id }
-            );
+            return await QuerySingleOrDefaultAsync<Subspecialty>(sql, new { Id = id });
         }
+
 
         public async Task<int> Create(Subspecialty s)
         {
             const string sql = @"
-                INSERT INTO dbo.subspecialty (code, name)
-                VALUES (@Code, @Name)";
-            return await ExecuteAsync(sql, s);
+        INSERT INTO dbo.subspecialty (SUBSPECIALTY_NAME)
+        OUTPUT INSERTED.SUBSPECIALTY_KEY
+        VALUES (@Name)";
+
+            return await ExecuteScalarAsync<int>(sql, s);
         }
+
 
 
         public async Task<int> Update(Subspecialty s)
         {
             const string sql = @"
-                UPDATE dbo.subspecialty
-                SET code = @Code,
-                    name = @Name
-                WHERE id = @Id";
+        UPDATE dbo.subspecialty
+        SET SUBSPECIALTY_NAME = @Name
+        WHERE SUBSPECIALTY_KEY = @Id";
+
             return await ExecuteAsync(sql, s);
         }
 
 
+
         public async Task<int> Delete(int id)
         {
-            const string sql = "DELETE FROM dbo.subspecialty WHERE id = @id";
-            return await ExecuteAsync(sql, new { id });
+            const string sql = @"
+        DELETE FROM dbo.subspecialty
+        WHERE SUBSPECIALTY_KEY = @Id";
+
+            return await ExecuteAsync(sql, new { Id = id });
         }
+
     }
 }

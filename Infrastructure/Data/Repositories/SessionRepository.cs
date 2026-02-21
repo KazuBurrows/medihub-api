@@ -8,71 +8,155 @@ namespace MediHub.Infrastructure.Data.Repositories
     {
         public SessionRepository(SqlConnectionFactory connectionFactory) : base(connectionFactory) { }
 
-        public async Task<IEnumerable<SessionDTO>> GetAll()
+        public async Task<IEnumerable<Session>> GetAll()
         {
-            var sql = @"
+            const string sql = @"
                 SELECT 
-                    s.id AS Id,
-                    s.name AS Name,
-                    s.is_acute AS IsAcute,
-                    s.is_pediatric AS IsPediatric,
-                    s.anaesthetic_type AS AnaestheticType,
-                    (st.first_name + ' ' + st.last_name) AS SurgeonName,
-                    sp.name AS SpecialtyName,
-                    sub.name AS SubspecialtyName,
-                    COUNT(i.id) AS InstanceCount
-                FROM session s
-                LEFT JOIN staff st ON st.id = s.surgeon_id
-                LEFT JOIN specialty sp ON sp.id = s.specialty_id
-                LEFT JOIN subspecialty sub ON sub.id = s.subspecialty_id
-                LEFT JOIN instance i ON i.session_id = s.id
-                GROUP BY 
-                    s.id, s.name, s.is_acute, s.is_pediatric, s.anaesthetic_type,
-                    st.first_name, st.last_name,
-                    sp.name, sub.name
-                ORDER BY s.name;
+                    SESSION_KEY AS Id,
+                    SESSION_TITLE AS Name,
+                    SESSION_IS_ACUTE AS IsAcute,
+                    SESSION_IS_PAEDIATRIC AS IsPediatric,
+                    SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    SESSION_SURGEION_KEY AS SurgeonId,
+                    SESSION_SPECIALTY_KEY AS SpecialtyId,
+                    SESSION_SUBSPECIALTY_KEY AS SubspecialtyId
+                FROM dbo.session
             ";
 
-
-    return await QueryAsync<SessionDTO>(sql);
-
+            return await QueryAsync<Session>(sql);
         }
+
+
+        public async Task<IEnumerable<SessionDTO>> GetAllDTO()
+        {
+            const string sql = @"
+                SELECT 
+                    s.SESSION_KEY AS Id,
+                    s.SESSION_TITLE AS Name,
+                    s.SESSION_IS_ACUTE AS IsAcute,
+                    s.SESSION_IS_PAEDIATRIC AS IsPediatric,
+                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_SURGEION_KEY AS SurgeonId,
+                    st.STAFF_NAME AS SurgeonName,
+                    s.SESSION_SPECIALTY_KEY AS SpecialtyId,
+                    sp.SPECIALTY_CODE AS SpecialtyCode,
+                    s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
+                    sub.SUBSPECIALTY_NAME AS SubspecialtyName
+                FROM dbo.session s
+                LEFT JOIN dbo.staff st ON st.STAFF_KEY = s.SESSION_SURGEION_KEY
+                LEFT JOIN dbo.specialty sp ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
+                LEFT JOIN dbo.subspecialty sub ON sub.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
+                ORDER BY s.SESSION_TITLE;
+            ";
+
+            return await QueryAsync<SessionDTO>(sql);
+        }
+
+
 
 
         public async Task<Session?> GetById(int id)
         {
-            return await QuerySingleOrDefaultAsync<Session>(
-                "SELECT * FROM dbo.session WHERE id = @id",
-                new { id }
-            );
+            const string sql = @"
+        SELECT
+            SESSION_KEY AS Id,
+            SESSION_TITLE AS Name,
+            SESSION_IS_ACUTE AS IsAcute,
+            SESSION_IS_PAEDIATRIC AS IsPediatric,
+            SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+            SESSION_SURGEION_KEY AS SurgeonId,
+            SESSION_SPECIALTY_KEY AS SpecialtyId,
+            SESSION_SUBSPECIALTY_KEY AS SubspecialtyId
+        FROM dbo.session
+        WHERE SESSION_KEY = @Id";
+
+            return await QuerySingleOrDefaultAsync<Session>(sql, new { Id = id });
         }
+
+        public async Task<SessionDTO?> GetByIdDTO(int id)
+{
+    const string sql = @"
+        SELECT
+            s.SESSION_KEY AS Id,
+            s.SESSION_TITLE AS Name,
+            s.SESSION_IS_ACUTE AS IsAcute,
+            s.SESSION_IS_PAEDIATRIC AS IsPediatric,
+            s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+            s.SESSION_SURGEION_KEY AS SurgeonId,
+            st.STAFF_NAME AS SurgeonName,
+            s.SESSION_SPECIALTY_KEY AS SpecialtyId,
+            sp.SPECIALTY_CODE AS SpecialtyCode,
+            s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
+            sub.SUBSPECIALTY_NAME AS SubspecialtyName
+        FROM dbo.session s
+        LEFT JOIN dbo.staff st
+            ON s.SESSION_SURGEION_KEY = st.STAFF_KEY
+        LEFT JOIN dbo.specialty sp
+            ON s.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+        LEFT JOIN dbo.subspecialty sub
+            ON s.SESSION_SUBSPECIALTY_KEY = sub.SUBSPECIALTY_KEY
+        WHERE s.SESSION_KEY = @Id";
+
+    return await QuerySingleOrDefaultAsync<SessionDTO>(sql, new { Id = id });
+}
+
+
 
         public async Task<int> Create(Session s)
         {
             const string sql = @"
-                INSERT INTO dbo.session (name, is_acute, is_pediatric, anaesthetic_type)
-                VALUES (@name, @IsAcute, @IsPediatric, @AnaestheticType)";
-            return await ExecuteAsync(sql, s);
+                INSERT INTO dbo.session (
+                    SESSION_TITLE,
+                    SESSION_IS_ACUTE,
+                    SESSION_IS_PAEDIATRIC,
+                    SESSION_ANAESTHETIC_TYPE,
+                    SESSION_SURGEION_KEY,
+                    SESSION_SPECIALTY_KEY,
+                    SESSION_SUBSPECIALTY_KEY
+                )
+                OUTPUT INSERTED.SESSION_KEY
+                VALUES (
+                    @Name,
+                    @IsAcute,
+                    @IsPediatric,
+                    @AnaestheticType,
+                    @SurgeonId,
+                    @SpecialtyId,
+                    @SubspecialtyId
+                )";
+
+            return await ExecuteScalarAsync<int>(sql, s);
         }
+
 
 
         public async Task<int> Update(Session s)
         {
             const string sql = @"
                 UPDATE dbo.session
-                SET name = @Name,
-                    is_acute = @IsAcute,
-                    is_pediatric = @IsPediatric,
-                    anaesthetic_type = @AnaestheticType
-                WHERE id = @Id";
+                SET
+                    SESSION_TITLE = @Name,
+                    SESSION_IS_ACUTE = @IsAcute,
+                    SESSION_IS_PAEDIATRIC = @IsPediatric,
+                    SESSION_ANAESTHETIC_TYPE = @AnaestheticType,
+                    SESSION_SURGEION_KEY = @SurgeonId,
+                    SESSION_SPECIALTY_KEY = @SpecialtyId,
+                    SESSION_SUBSPECIALTY_KEY = @SubspecialtyId
+                WHERE SESSION_KEY = @Id";
+
             return await ExecuteAsync(sql, s);
         }
 
 
+
         public async Task<int> Delete(int id)
         {
-            const string sql = "DELETE FROM dbo.session WHERE id = @id";
-            return await ExecuteAsync(sql, new { id });
+            const string sql = @"
+                DELETE FROM dbo.session
+                WHERE SESSION_KEY = @Id";
+
+            return await ExecuteAsync(sql, new { Id = id });
         }
+
     }
 }

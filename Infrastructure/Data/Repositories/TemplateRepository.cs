@@ -92,45 +92,45 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
 
-        public async Task<TemplateDetailDTO> GetTemplateDetailDTO(int templateId)
-        {
-            const string sql = @"
-                SELECT
-                    st.id AS Id,
-                    st.session_id AS SessionId,
-                    s.name AS SessionName,
-                    s.is_acute AS IsAcute,
-                    s.is_pediatric AS IsPediatric,
-                    s.anaesthetic_type AS AnaestheticType,
-                    CONCAT(stf.first_name, ' ', stf.last_name) AS SurgeonName,
-                    sp.name AS SpecialtyName,
-                    sub.name AS SubspecialtyName,
-                    st.asset_id AS AssetId,
-                    t.name AS AssetName,
-                    f.name AS FacilityName,
-                    st.week AS Week,
-                    st.day_of_week AS DayOfWeek,
-                    st.start_time AS StartTime,
-                    st.end_time AS EndTime,
-                    st.is_open AS IsOpen
-                FROM dbo.instance_template st
-                INNER JOIN dbo.session s ON st.session_id = s.id
-                INNER JOIN dbo.asset t ON st.asset_id = t.id
-                INNER JOIN dbo.facility f ON t.facility_id = f.id
-                LEFT JOIN dbo.staff stf ON s.surgeon_id = stf.id
-                LEFT JOIN dbo.specialty sp ON s.specialty_id = sp.id
-                LEFT JOIN dbo.subspecialty sub ON s.subspecialty_id = sub.id
-                WHERE st.id = @TemplateId;
-            ";
+        // public async Task<TemplateDTO> GetTemplateDTO(int templateId)
+        // {
+        //     const string sql = @"
+        //         SELECT
+        //             st.id AS Id,
+        //             st.session_id AS SessionId,
+        //             s.name AS SessionName,
+        //             s.is_acute AS IsAcute,
+        //             s.is_pediatric AS IsPediatric,
+        //             s.anaesthetic_type AS AnaestheticType,
+        //             CONCAT(stf.first_name, ' ', stf.last_name) AS SurgeonName,
+        //             sp.name AS SpecialtyName,
+        //             sub.name AS SubspecialtyName,
+        //             st.asset_id AS AssetId,
+        //             t.name AS AssetName,
+        //             f.name AS FacilityName,
+        //             st.week AS Week,
+        //             st.day_of_week AS DayOfWeek,
+        //             st.start_time AS StartTime,
+        //             st.end_time AS EndTime,
+        //             st.is_open AS IsOpen
+        //         FROM dbo.instance_template st
+        //         INNER JOIN dbo.session s ON st.session_id = s.id
+        //         INNER JOIN dbo.asset t ON st.asset_id = t.id
+        //         INNER JOIN dbo.facility f ON t.facility_id = f.id
+        //         LEFT JOIN dbo.staff stf ON s.surgeon_id = stf.id
+        //         LEFT JOIN dbo.specialty sp ON s.specialty_id = sp.id
+        //         LEFT JOIN dbo.subspecialty sub ON s.subspecialty_id = sub.id
+        //         WHERE st.id = @TemplateId;
+        //     ";
 
-            var template = (await QueryAsync<TemplateDetailDTO>(sql, new { TemplateId = templateId }))
-                            .FirstOrDefault();
+        //     var template = (await QueryAsync<TemplateDTO>(sql, new { TemplateId = templateId }))
+        //                     .FirstOrDefault();
 
-            if (template == null)
-                return null!; // or throw an exception            
+        //     if (template == null)
+        //         return null!; // or throw an exception            
 
-            return template;
-        }
+        //     return template;
+        // }
 
 
 
@@ -176,7 +176,7 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<TemplateDetailDTO> CreateTemplateDetailDTO(
+        public async Task<TemplateDTO> CreateTemplateDTO(
             int sessionId,
             int assetId,
             int week,
@@ -235,12 +235,12 @@ namespace MediHub.Infrastructure.Data.Repositories
 
             var newId = (await QueryAsync<int>(sql, parameters)).First();
 
-            return await GetTemplateDetailDTO(newId);
+            return await GetByIdDTO(newId);
         }
 
 
 
-        public async Task<TemplateDetailDTO> PutTemplateDetailDTO(
+        public async Task<TemplateDTO> PutTemplateDTO(
             int id,
             int sessionId,
             int assetId,
@@ -279,16 +279,16 @@ namespace MediHub.Infrastructure.Data.Repositories
             const string sql = @"
                 BEGIN TRANSACTION;
 
-                -- Update template
                 UPDATE dbo.instance_template
                 SET
-                    session_id = @SessionId,
-                    asset_id = @AssetId,
-                    week = @Week,
-                    day_of_week = @DayOfWeek,
-                    start_time = @StartTime,
-                    end_time = @EndTime
-                WHERE id = @Id;
+                    INSTANCE_TEMPLATE_SESSION_KEY = @SessionId,
+                    INSTANCE_TEMPLATE_ASSET_KEY = @AssetId,
+                    INSTANCE_TEMPLATE_CYCLE_WEEK = @Week,
+                    INSTANCE_TEMPLATE_CYCLE_DAY = @DayOfWeek,
+                    INSTANCE_TEMPLATE_START_TIME = @StartTime,
+                    INSTANCE_TEMPLATE_END_TIME = @EndTime,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME = SYSUTCDATETIME()
+                WHERE INSTANCE_TEMPLATE_KEY = @Id;
 
                 IF @@ROWCOUNT = 0
                 BEGIN
@@ -313,7 +313,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
             await ExecuteAsync(sql, parameters);
 
-            return await GetTemplateDetailDTO(id);
+            return await GetByIdDTO(id);
         }
 
 
@@ -321,123 +321,288 @@ namespace MediHub.Infrastructure.Data.Repositories
         {
             const string sql = @"
                 DELETE FROM dbo.instance_template
-                WHERE id = @Id;
+                WHERE INSTANCE_TEMPLATE_KEY = @Id;
             ";
 
             return await ExecuteAsync(sql, new { Id = id });
         }
 
-        
 
-        public async Task<string> ApplyTemplate(DateOnly date, bool force)
-        {
-            _logger.LogInformation("=== ApplyTemplate STARTED === BaseDate: {Date}", date);
 
-            const string sqlTemplate = @"
-                BEGIN TRANSACTION;
+        // public async Task<string> ApplyTemplate(DateOnly date, bool force)
+        // {
+        //     _logger.LogInformation("=== ApplyTemplate STARTED === BaseDate: {Date}", date);
 
-                INSERT INTO dbo.instance (asset_id, session_id, start_datetime, end_datetime)
-                VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime);
+        //     const string sqlTemplate = @"
+        //         BEGIN TRANSACTION;
 
-                DECLARE @NewInstanceId INT = SCOPE_IDENTITY();
+        //         INSERT INTO dbo.instance (asset_id, session_id, start_datetime, end_datetime)
+        //         VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime);
 
-                COMMIT;
-            ";
+        //         DECLARE @NewInstanceId INT = SCOPE_IDENTITY();
 
-            
+        //         COMMIT;
+        //     ";
 
-            try
-            {
-                // Loop through weeks 1 to 4
-                for (int week = 1; week <= 4; week++)
-                {
-                    var weekStartDate = date.AddDays((week - 1) * 7);
-                    _logger.LogInformation("Processing Week {Week} | WeekStartDate: {WeekStartDate}", week, weekStartDate);
 
-                    var templates = (await QueryAsync<InstanceTemplate>(@"
-                        SELECT 
-                            id,
-                            session_id  AS SessionId,
-                            asset_id  AS AssetId,
-                            week,
-                            day_of_week AS DayOfWeek,
-                            start_time  AS StartTime,
-                            end_time    AS EndTime
-                        FROM dbo.instance_template
-                        WHERE week = @Week AND is_open = 1
-                    ", new { Week = week })).ToList();
 
-                    if (!templates.Any())
-                    {
-                        _logger.LogWarning("No active templates found for week {Week}", week);
-                        continue;
-                    }
+        //     try
+        //     {
+        //         // Loop through weeks 1 to 4
+        //         for (int week = 1; week <= 4; week++)
+        //         {
+        //             var weekStartDate = date.AddDays((week - 1) * 7);
+        //             _logger.LogInformation("Processing Week {Week} | WeekStartDate: {WeekStartDate}", week, weekStartDate);
 
-                    
+        //             var templates = (await QueryAsync<Template>(@"
+        //                 SELECT 
+        //                     id,
+        //                     session_id  AS SessionId,
+        //                     asset_id  AS AssetId,
+        //                     week,
+        //                     day_of_week AS DayOfWeek,
+        //                     start_time  AS StartTime,
+        //                     end_time    AS EndTime
+        //                 FROM dbo.instance_template
+        //                 WHERE week = @Week AND is_open = 1
+        //             ", new { Week = week })).ToList();
 
-                    // ---- Insert loop ----
-                    foreach (var t in templates)
-                    {
-                        var startDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
-                                                        .Add(t.StartTime)
-                                                        .AddDays(t.DayOfWeek - 1);
-                        var endDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
-                                                      .Add(t.EndTime)
-                                                      .AddDays(t.DayOfWeek - 1);
+        //             if (!templates.Any())
+        //             {
+        //                 _logger.LogWarning("No active templates found for week {Week}", week);
+        //                 continue;
+        //             }
 
-                        await QueryAsync<int>(sqlTemplate, new
-                        {
-                            TemplateId = t.Id,
-                            SessionId = t.SessionId,
-                            AssetId = t.AssetId,
-                            StartDateTime = startDateTime,
-                            EndDateTime = endDateTime
-                        });
-                    }
 
-                }
 
-                return $"ApplyTemplate completed successfully.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex, "ApplyTemplate CRASHED for BaseDate {Date}", date);
-                throw; // important — let Azure know it failed
-            }
-        }
+        //             // ---- Insert loop ----
+        //             foreach (var t in templates)
+        //             {
+        //                 var startDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
+        //                         .Add(t.StartTime.Value)  // unwrap nullable
+        //                         .AddDays(t.DayOfWeek.Value - 1);
 
-        public async Task<IEnumerable<TemplateDetailDTO>> GetAllDTO()
+        //                 var endDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
+        //                                               .Add(t.EndTime.Value)
+        //                                               .AddDays(t.DayOfWeek.Value - 1);
+
+        //                 await QueryAsync<int>(sqlTemplate, new
+        //                 {
+        //                     TemplateId = t.Id,
+        //                     SessionId = t.SessionId,
+        //                     AssetId = t.AssetId,
+        //                     StartDateTime = startDateTime,
+        //                     EndDateTime = endDateTime
+        //                 });
+        //             }
+
+        //         }
+
+        //         return $"ApplyTemplate completed successfully.";
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogCritical(ex, "ApplyTemplate CRASHED for BaseDate {Date}", date);
+        //         throw; // important — let Azure know it failed
+        //     }
+        // }
+
+        public async Task<IEnumerable<TemplateDTO>> GetAllDTO()
         {
             const string sql = @"
                 SELECT
-                    s.id AS Id,
-                    t.id AS AssetId,
-                    t.name AS AssetName,
-                    f.id AS FacilityId,
-                    f.name AS FacilityName,
-                    se.id AS SessionId,
-                    se.name AS SessionName,
-                    se.is_acute AS IsAcute,
-                    se.is_pediatric AS IsPediatric,
-                    se.anaesthetic_type AS AnaestheticType,
-                    (st.first_name + ' ' + st.last_name) AS SurgeonName,
-                    sp.name AS SpecialtyName,
-                    ssp.name AS SubspecialtyName,
-                    s.week AS Week,
-                    s.day_of_week AS DayOfWeek,
-                    s.start_time AS StartTime,
-                    s.end_time AS EndTime,
-                    s.is_open AS IsOpen
-                FROM dbo.instance_template s
-                LEFT JOIN dbo.asset t ON s.asset_id = t.id
-                LEFT JOIN dbo.facility f ON t.facility_id = f.id
-                LEFT JOIN dbo.session se ON s.session_id = se.id
-                LEFT JOIN dbo.staff st ON se.surgeon_id = st.id
-                LEFT JOIN dbo.specialty sp ON se.specialty_id = sp.id
-                LEFT JOIN dbo.subspecialty ssp ON se.subspecialty_id = ssp.id
+                    -- Instance template columns
+                    it.INSTANCE_TEMPLATE_KEY          AS Id,
+                    it.INSTANCE_TEMPLATE_SESSION_KEY  AS SessionId,
+                    it.INSTANCE_TEMPLATE_ASSET_KEY    AS AssetId,
+                    it.INSTANCE_TEMPLATE_CYCLE_WEEK   AS CycleWeek,
+                    it.INSTANCE_TEMPLATE_CYCLE_DAY    AS CycleDay,
+                    it.INSTANCE_TEMPLATE_IS_OPEN      AS IsOpen,
+                    it.INSTANCE_TEMPLATE_START_TIME   AS StartTime,
+                    it.INSTANCE_TEMPLATE_END_TIME     AS EndTime,
+                    it.INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                    it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+
+                    -- Asset columns
+                    a.ASSET_CODE                      AS AssetCode,
+                    a.ASSET_LOCATION                  AS AssetLocation,
+                    a.ASSET_FACILITY_KEY               AS FacilityId,
+
+                    -- Facility columns
+                    f.FACILITY_NAME                    AS FacilityName,
+
+                    -- Session columns
+                    se.SESSION_TITLE                   AS SessionTitle,
+                    se.SESSION_IS_ACUTE                AS SessionIsAcute,
+                    se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
+                    se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
+                    se.SESSION_SURGEION_KEY            AS SurgeonId,
+                    se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
+                    se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
+
+                    -- Surgeon columns (staff)
+                    s.STAFF_NAME AS SurgeonName,
+
+                    -- Specialty
+                    sp.SPECIALTY_CODE                  AS SpecialtyCode,
+
+                    -- Subspecialty
+                    ss.SUBSPECIALTY_NAME               AS SubspecialtyName,
+
+                    -- Last updated staff info
+                    stf.STAFF_ID                       AS LastUpdatedByUserCode,
+                    stf.STAFF_NAME                     AS LastUpdatedByUserName
+
+                FROM dbo.instance_template it
+                LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
+                LEFT JOIN dbo.staff s ON se.SESSION_SURGEION_KEY = s.STAFF_KEY
+                LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+                LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
+                LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                ORDER BY it.INSTANCE_TEMPLATE_KEY;
             ";
 
-            return await QueryAsync<TemplateDetailDTO>(sql);
+            return await QueryAsync<TemplateDTO>(sql);
+        }
+
+
+        public async Task<Template?> GetById(int id)
+        {
+            const string sql = @"
+                SELECT
+                    INSTANCE_TEMPLATE_KEY       AS Id,
+                    INSTANCE_TEMPLATE_SESSION_KEY AS SessionId,
+                    INSTANCE_TEMPLATE_ASSET_KEY   AS AssetId,
+                    INSTANCE_TEMPLATE_CYCLE_WEEK  AS CycleWeek,
+                    INSTANCE_TEMPLATE_CYCLE_DAY   AS CycleDay,
+                    INSTANCE_TEMPLATE_IS_OPEN     AS IsOpen,
+                    INSTANCE_TEMPLATE_START_TIME  AS StartTime,
+                    INSTANCE_TEMPLATE_END_TIME    AS EndTime,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId
+                FROM dbo.instance_template
+                WHERE INSTANCE_TEMPLATE_KEY = @Id;
+            ";
+
+            return await QuerySingleOrDefaultAsync<Template>(sql, new { Id = id });
+        }
+
+        public async Task<TemplateDTO?> GetByIdDTO(int id)
+        {
+            const string sql = @"
+                SELECT
+                    -- Instance template columns
+                    it.INSTANCE_TEMPLATE_KEY          AS Id,
+                    it.INSTANCE_TEMPLATE_SESSION_KEY  AS SessionId,
+                    it.INSTANCE_TEMPLATE_ASSET_KEY    AS AssetId,
+                    it.INSTANCE_TEMPLATE_CYCLE_WEEK   AS CycleWeek,
+                    it.INSTANCE_TEMPLATE_CYCLE_DAY    AS CycleDay,
+                    it.INSTANCE_TEMPLATE_IS_OPEN      AS IsOpen,
+                    it.INSTANCE_TEMPLATE_START_TIME   AS StartTime,
+                    it.INSTANCE_TEMPLATE_END_TIME     AS EndTime,
+                    it.INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                    it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+
+                    -- Asset columns
+                    a.ASSET_CODE                      AS AssetCode,
+                    a.ASSET_LOCATION                  AS AssetLocation,
+                    a.ASSET_FACILITY_KEY               AS FacilityId,
+
+                    -- Facility columns
+                    f.FACILITY_NAME                    AS FacilityName,
+
+                    -- Session columns
+                    se.SESSION_TITLE                   AS SessionTitle,
+                    se.SESSION_IS_ACUTE                AS SessionIsAcute,
+                    se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
+                    se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
+                    se.SESSION_SURGEION_KEY            AS SurgeonId,
+                    se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
+                    se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
+
+                    -- Surgeon columns (staff)
+                    s.STAFF_NAME AS SurgeonName,
+
+                    -- Specialty
+                    sp.SPECIALTY_CODE                  AS SpecialtyCode,
+
+                    -- Subspecialty
+                    ss.SUBSPECIALTY_NAME               AS SubspecialtyName,
+
+                    -- Last updated staff info
+                    stf.STAFF_ID                       AS LastUpdatedByUserCode,
+                    stf.STAFF_NAME                     AS LastUpdatedByUserName
+
+                FROM dbo.instance_template it
+                LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
+                LEFT JOIN dbo.staff s ON se.SESSION_SURGEION_KEY = s.STAFF_KEY
+                LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+                LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
+                LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                WHERE it.INSTANCE_TEMPLATE_KEY = @Id;
+            ";
+
+            return await QuerySingleOrDefaultAsync<TemplateDTO>(sql, new { Id = id });
+        }
+
+
+
+        public async Task<int> Update(Template t)
+        {
+            const string sql = @"
+                UPDATE dbo.instance_template
+                SET
+                    INSTANCE_TEMPLATE_SESSION_KEY = @SessionId,
+                    INSTANCE_TEMPLATE_ASSET_KEY = @AssetId,
+                    INSTANCE_TEMPLATE_CYCLE_WEEK = @CycleWeek,
+                    INSTANCE_TEMPLATE_CYCLE_DAY = @CycleDay,
+                    INSTANCE_TEMPLATE_IS_OPEN = @IsOpen,
+                    INSTANCE_TEMPLATE_START_TIME = @StartTime,
+                    INSTANCE_TEMPLATE_END_TIME = @EndTime,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME = GETDATE(),
+                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = @LastUpdatedByUserId
+                WHERE
+                    INSTANCE_TEMPLATE_KEY = @Id;
+            ";
+
+            return await ExecuteAsync(sql, t);
+        }
+
+        public async Task<int> Create(Template t)
+        {
+            const string sql = @"
+                INSERT INTO dbo.instance_template
+                (
+                    INSTANCE_TEMPLATE_SESSION_KEY,
+                    INSTANCE_TEMPLATE_ASSET_KEY,
+                    INSTANCE_TEMPLATE_CYCLE_WEEK,
+                    INSTANCE_TEMPLATE_CYCLE_DAY,
+                    INSTANCE_TEMPLATE_IS_OPEN,
+                    INSTANCE_TEMPLATE_START_TIME,
+                    INSTANCE_TEMPLATE_END_TIME,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY
+                )
+                OUTPUT INSERTED.INSTANCE_TEMPLATE_KEY
+                VALUES
+                (
+                    @SessionId,
+                    @AssetId,
+                    @CycleWeek,
+                    @CycleDay,
+                    @IsOpen,
+                    @StartTime,
+                    @EndTime,
+                    GETDATE(),
+                    @LastUpdatedByUserId
+                );
+            ";
+
+            return await ExecuteScalarAsync<int>(sql, t);
         }
 
     }

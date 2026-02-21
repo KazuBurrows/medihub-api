@@ -29,14 +29,24 @@ namespace MediHub.Application.Services
             return _repository.Update(s);
         }
 
-        public async Task<IEnumerable<SessionDTO>> GetAll()
+        public async Task<IEnumerable<Session>> GetAll()
         {
             return await _repository.GetAll();
+        }
+
+        public async Task<IEnumerable<SessionDTO>> GetAllDTO()
+        {
+            return await _repository.GetAllDTO();
         }
 
         public async Task<Session> GetById(int id)
         {
             return await _repository.GetById(id);
+        }
+
+        public async Task<SessionDTO> GetByIdDTO(int id)
+        {
+            return await _repository.GetByIdDTO(id);
         }
     }
 }

@@ -21,6 +21,24 @@ namespace MediHub.Infrastructure.Data.Repositories
             return await conn.QueryAsync<T>(sql, parameters);
         }
 
+        /**
+        *** Use when: You expect to multi-map rows from a SELECT query.
+        **/
+        public async Task<IEnumerable<TReturn>> QueryAsync<TFirst, TSecond, TReturn>(
+            string sql,
+            Func<TFirst, TSecond, TReturn> map,
+            object parameters = null,
+            string splitOn = "Id")
+        {
+            using var conn = await _connectionFactory.GetOpenConnectionAsync();
+
+            return await conn.QueryAsync<TFirst, TSecond, TReturn>(
+                sql,
+                map,
+                parameters,
+                splitOn: splitOn
+            );
+        }
 
         /**
         *** Use when: You expect at most one row from a SELECT query.

@@ -215,19 +215,19 @@ namespace MediHub.Infrastructure.Data.Repositories
             // ---------------- STAFF + ROLE QUERY ----------------
             const string staffSql = @"
                 SELECT 
-                    st.id AS Id,
-                    st.first_name AS FirstName,
-                    st.last_name AS LastName,
-                    st.code AS Code,
-                    st.email AS Email,
-                    r.id AS RoleId,
-                    r.name AS RoleName
+                    st.STAFF_KEY AS Id,
+                    st.STAFF_ID AS Code,
+                    st.STAFF_NAME AS Name,
+                    st.STAFF_EMAIL AS Email,
+                    r.ROLE_KEY AS RoleId,
+                    r.ROLE_NAME AS RoleName
                 FROM dbo.instance_staff isf
-                LEFT JOIN dbo.staff st ON isf.staff_id = st.id
-                LEFT JOIN dbo.role r ON isf.role_id = r.id
-                WHERE isf.instance_id = @InstanceId
-                ORDER BY r.name, st.last_name;
+                LEFT JOIN dbo.staff st ON isf.STAFF_KEY = st.STAFF_KEY
+                LEFT JOIN dbo.role r ON isf.ROLE_KEY = r.ROLE_KEY
+                WHERE isf.INSTANCE_KEY = @InstanceId
+                ORDER BY r.ROLE_NAME, st.STAFF_NAME;
             ";
+
 
             var staff = await QueryAsync<StaffDTO>(
                 staffSql,
@@ -243,138 +243,138 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
         public async Task<InstanceDetailDTO> PutInstanceDetailDTO(
-    int id,
-    int sessionId,
-    int assetId,
-    string startDatetime,
-    string endDatetime,
-    List<StaffDTO> staffs,
-    bool force)
-{
-    // Parse datetime
-    if (!DateTime.TryParse(startDatetime, out var start))
-        throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
+            int id,
+            int sessionId,
+            int assetId,
+            string startDatetime,
+            string endDatetime,
+            List<StaffDTO> staffs,
+            bool force)
+        {
+            // Parse datetime
+            if (!DateTime.TryParse(startDatetime, out var start))
+                throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
 
-    if (!DateTime.TryParse(endDatetime, out var end))
-        throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
+            if (!DateTime.TryParse(endDatetime, out var end))
+                throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
 
-    /* ---------------- INSTANCE CLASH CHECK ---------------- */
-    // var conflictMessage = await _schedulingClash.CheckForInstanceClashes(id, assetId, start, end, staffs);
-    // if (!force && conflictMessage != null)
-    //     throw new InstanceClashException(conflictMessage);
+            /* ---------------- INSTANCE CLASH CHECK ---------------- */
+            // var conflictMessage = await _schedulingClash.CheckForInstanceClashes(id, assetId, start, end, staffs);
+            // if (!force && conflictMessage != null)
+            //     throw new InstanceClashException(conflictMessage);
 
-    // Convert StaffDTO list into a TVP with both StaffId and RoleId
-    var staffTable = DataTransformer.ToStaffRoleTable(staffs);
+            // Convert StaffDTO list into a TVP with both StaffId and RoleId
+            var staffTable = DataTransformer.ToStaffRoleTable(staffs);
 
-    const string sql = @"
-        BEGIN TRANSACTION;
+            const string sql = @"
+                BEGIN TRANSACTION;
 
-        -- Update instance
-        UPDATE dbo.instance
-        SET
-            session_id     = @SessionId,
-            asset_id       = @AssetId,
-            start_datetime = @StartDateTime,
-            end_datetime   = @EndDateTime
-        WHERE id = @Id;
+                -- Update instance
+                UPDATE dbo.instance
+                SET
+                    session_id     = @SessionId,
+                    asset_id       = @AssetId,
+                    start_datetime = @StartDateTime,
+                    end_datetime   = @EndDateTime
+                WHERE id = @Id;
 
-        IF @@ROWCOUNT = 0
-        BEGIN
-            ROLLBACK;
-            RETURN;
-        END
+                IF @@ROWCOUNT = 0
+                BEGIN
+                    ROLLBACK;
+                    RETURN;
+                END
 
-        -- Delete staff no longer assigned
-        DELETE isf
-        FROM dbo.instance_staff isf
-        LEFT JOIN @StaffTable s
-            ON isf.staff_id = s.StaffId
-        WHERE isf.instance_id = @Id
-        AND s.StaffId IS NULL;
+                -- Delete staff no longer assigned
+                DELETE isf
+                FROM dbo.instance_staff isf
+                LEFT JOIN @StaffTable s
+                    ON isf.staff_id = s.StaffId
+                WHERE isf.instance_id = @Id
+                AND s.StaffId IS NULL;
 
-        -- Insert new staff assignments (with role)
-        INSERT INTO dbo.instance_staff (instance_id, staff_id, role_id)
-        SELECT @Id, s.StaffId, s.RoleId
-        FROM @StaffTable s
-        LEFT JOIN dbo.instance_staff isf
-            ON isf.instance_id = @Id
-            AND isf.staff_id = s.StaffId
-        WHERE isf.id IS NULL;
+                -- Insert new staff assignments (with role)
+                INSERT INTO dbo.instance_staff (instance_id, staff_id, role_id)
+                SELECT @Id, s.StaffId, s.RoleId
+                FROM @StaffTable s
+                LEFT JOIN dbo.instance_staff isf
+                    ON isf.instance_id = @Id
+                    AND isf.staff_id = s.StaffId
+                WHERE isf.id IS NULL;
 
-        COMMIT;
-    ";
+                COMMIT;
+            ";
 
-    var parameters = new
-    {
-        Id = id,
-        SessionId = sessionId,
-        AssetId = assetId,
-        StartDateTime = start,
-        EndDateTime = end,
-        StaffTable = staffTable.AsTableValuedParameter("dbo.StaffRoleList") // TVP with StaffId + RoleId
-    };
+            var parameters = new
+            {
+                Id = id,
+                SessionId = sessionId,
+                AssetId = assetId,
+                StartDateTime = start,
+                EndDateTime = end,
+                StaffTable = staffTable.AsTableValuedParameter("dbo.StaffRoleList") // TVP with StaffId + RoleId
+            };
 
-    await ExecuteAsync(sql, parameters);
+            await ExecuteAsync(sql, parameters);
 
-    return await GetInstanceDetailDTO(id);
-}
+            return await GetInstanceDetailDTO(id);
+        }
 
 
 
         public async Task<InstanceDetailDTO> CreateInstanceDetailDTO(
-    int sessionId,
-    int assetId,
-    string startDatetime,
-    string endDatetime,
-    List<StaffDTO> staffs,
-    bool force)
-{
-    // Parse datetime
-    if (!DateTime.TryParse(startDatetime, out var start))
-        throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
+            int sessionId,
+            int assetId,
+            string startDatetime,
+            string endDatetime,
+            List<StaffDTO> staffs,
+            bool force)
+        {
+            // Parse datetime
+            if (!DateTime.TryParse(startDatetime, out var start))
+                throw new ArgumentException("Invalid startDatetime", nameof(startDatetime));
 
-    if (!DateTime.TryParse(endDatetime, out var end))
-        throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
+            if (!DateTime.TryParse(endDatetime, out var end))
+                throw new ArgumentException("Invalid endDatetime", nameof(endDatetime));
 
-    // Optional: Check for instance time clashes
-    // var conflictMessage = await _schedulingClash.CheckForInstanceClashes(null, assetId, start, end, staffs);
-    // if (!force && conflictMessage != null)
-    //     throw new InstanceClashException(conflictMessage);
+            // Optional: Check for instance time clashes
+            // var conflictMessage = await _schedulingClash.CheckForInstanceClashes(null, assetId, start, end, staffs);
+            // if (!force && conflictMessage != null)
+            //     throw new InstanceClashException(conflictMessage);
 
-    // Convert staffs to TVP with StaffId and RoleId
-    var staffTable = DataTransformer.ToStaffRoleTable(staffs);
+            // Convert staffs to TVP with StaffId and RoleId
+            var staffTable = DataTransformer.ToStaffRoleTable(staffs);
 
-    const string sql = @"
-        BEGIN TRANSACTION;
+            const string sql = @"
+                BEGIN TRANSACTION;
 
-        INSERT INTO dbo.instance (session_id, asset_id, start_datetime, end_datetime)
-        VALUES (@SessionId, @AssetId, @StartDateTime, @EndDateTime);
+                INSERT INTO dbo.instance (session_id, asset_id, start_datetime, end_datetime)
+                VALUES (@SessionId, @AssetId, @StartDateTime, @EndDateTime);
 
-        DECLARE @NewId INT = SCOPE_IDENTITY();
+                DECLARE @NewId INT = SCOPE_IDENTITY();
 
-        -- Insert staff assignments with optional role
-        INSERT INTO dbo.instance_staff (instance_id, staff_id, role_id)
-        SELECT @NewId, s.StaffId, s.RoleId
-        FROM @StaffTable s;
+                -- Insert staff assignments with optional role
+                INSERT INTO dbo.instance_staff (instance_id, staff_id, role_id)
+                SELECT @NewId, s.StaffId, s.RoleId
+                FROM @StaffTable s;
 
-        COMMIT;
+                COMMIT;
 
-        SELECT @NewId AS Id;
-    ";
+                SELECT @NewId AS Id;
+            ";
 
-    var parameters = new
-    {
-        SessionId = sessionId,
-        AssetId = assetId,
-        StartDateTime = start,
-        EndDateTime = end,
-        StaffTable = staffTable.AsTableValuedParameter("dbo.StaffRoleList") // TVP with StaffId + RoleId
-    };
+            var parameters = new
+            {
+                SessionId = sessionId,
+                AssetId = assetId,
+                StartDateTime = start,
+                EndDateTime = end,
+                StaffTable = staffTable.AsTableValuedParameter("dbo.StaffRoleList") // TVP with StaffId + RoleId
+            };
 
-    var newId = (await QueryAsync<int>(sql, parameters)).First();
+            var newId = (await QueryAsync<int>(sql, parameters)).First();
 
-    return await GetInstanceDetailDTO(newId);
-}
+            return await GetInstanceDetailDTO(newId);
+        }
 
 
 

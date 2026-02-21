@@ -45,6 +45,30 @@ namespace MediHub.Application.Services
             return await _repository.GetAllByStaffId(staffId);
         }
 
+        public async Task<IEnumerable<InstanceDTO>> GetAllDTO()
+        {
+            return await _repository.GetAllDTO();
+        }
+
+        public async Task<int> CreateDTO(InstanceDTO i)
+        {
+            return await _repository.CreateDTO(i);
+        }
+
+        public async Task<InstanceDTO> GetByIdDTO(int id)
+        {
+            return await _repository.GetByIdDTO(id);
+        }
+
+        public async Task<InstanceDTO> UpdateDTO(InstanceDTO i)
+        {
+            return await _repository.UpdateDTO(i);
+        }
+
+        public async Task<int> DeleteDTO(int id)
+        {
+            return await _repository.DeleteDTO(id);
+        }
     }
 }
 

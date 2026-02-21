@@ -8,9 +8,11 @@ namespace MediHub.Application.Interfaces
         Task<int> Create(Session s);
         Task<int> Delete(int id);
         Task<int> Update(Session s);
-        Task<IEnumerable<SessionDTO>> GetAll();
-        Task<Session> GetById(int id);
+        Task<IEnumerable<Session>> GetAll();
 
-        // Task<SessionDTO> GetAggById(int id);
+        Task<IEnumerable<SessionDTO>> GetAllDTO();
+        Task<Session> GetById(int id);
+        Task<SessionDTO> GetByIdDTO(int id);
+
     }
 }

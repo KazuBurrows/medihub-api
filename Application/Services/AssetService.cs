@@ -40,31 +40,6 @@ namespace MediHub.Application.Services
         }
 
 
-        public Task<int> CreateAgg(AssetAggregate t)
-        {
-            return _repository.CreateAgg(t);
-        }
-
-        public Task<int> DeleteAgg(int id)
-        {
-            return _repository.DeleteAgg(id);
-        }
-
-        public Task<int> UpdateAgg(AssetAggregate t)
-        {
-            return _repository.UpdateAgg(t);
-        }
-
-        public async Task<IEnumerable<AssetAggregate>> GetAllAgg()
-        {
-            return await _repository.GetAllAgg();
-        }
-
-        public async Task<AssetAggregate> GetByIdAgg(int id)
-        {
-            return await _repository.GetByIdAgg(id);
-        }
-
         public async Task<IEnumerable<AssetDTO>> GetAllDTO()
         {
             return await _repository.GetAllDTO();

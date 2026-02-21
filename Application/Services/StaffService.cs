@@ -42,6 +42,16 @@ namespace MediHub.Application.Services
         {
             return await _repository.GetByEmail(email);
         }
+
+        public async Task<IEnumerable<StaffDTO>> GetAllDTO()
+        {
+            return await _repository.GetAllDTO();
+        }
+
+        public async Task<StaffDTO> GetByIdDTO(int id)
+        {
+            return await _repository.GetByIdDTO(id);
+        }
     }
 }
 

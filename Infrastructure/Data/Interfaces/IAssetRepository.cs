@@ -11,13 +11,6 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task<IEnumerable<Asset>> GetAll();
         Task<Asset> GetById(int id);
 
-        // Asset with junction table
-        Task<int> CreateAgg(AssetAggregate t);
-        Task<int> DeleteAgg(int id);
-        Task<int> UpdateAgg(AssetAggregate t);
-        Task<IEnumerable<AssetAggregate>> GetAllAgg();
-        Task<AssetAggregate> GetByIdAgg(int id);
-
         Task<IEnumerable<AssetDTO>> GetAllDTO();
         Task<AssetDTO> GetByIdDTO(int id);
     }
