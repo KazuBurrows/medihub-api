@@ -25,47 +25,74 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
         public async Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(
-            int week,
-            int? facilityId,
-            int? assetId)
+    int week,
+    int? facilityId,
+    int? assetId)
         {
             const string sql = @"
-                SELECT
-                    st.id AS Id,
-                    f.name AS FacilityName,
-                    t.name AS AssetName,
-                    s.name AS SessionName,
-                    s.is_pediatric AS IsPediatric,
-                    s.is_acute AS IsAcute,
-                    s.anaesthetic_type AS AnaestheticType,
-                    CONCAT(stf.first_name, ' ', stf.last_name) AS SurgeonName,
-                    st.week AS Week,
-                    st.day_of_week AS DayOfWeek,
-                    st.start_time AS StartTime,
-                    st.end_time AS EndTime,
-                    st.is_open AS IsOpen
-                FROM dbo.instance_template st
-                INNER JOIN dbo.session s ON st.session_id = s.id
-                INNER JOIN dbo.asset t ON st.asset_id = t.id
-                INNER JOIN dbo.facility f ON t.facility_id = f.id
-                LEFT JOIN dbo.staff stf ON s.surgeon_id = stf.id
-                WHERE st.week = @Week
-                /**FACILITY_FILTER**/
-                /**ASSET_FILTER**/
-                ORDER BY st.day_of_week, st.start_time;
-            ";
+        SELECT
+            it.INSTANCE_TEMPLATE_KEY AS Id,
 
-            // Build parameters dictionary
+            -- Facility
+            f.FACILITY_KEY AS FacilityId,
+            f.FACILITY_NAME AS FacilityName,
+
+            -- Asset
+            a.ASSET_KEY AS AssetId,
+            a.ASSET_CODE AS AssetName,
+
+            -- Session
+            s.SESSION_TITLE AS SessionName,
+            s.SESSION_IS_PAEDIATRIC AS IsPediatric,
+            s.SESSION_IS_ACUTE AS IsAcute,
+            s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+
+            -- Surgeon
+            st.STAFF_NAME AS SurgeonName,
+
+            -- Schedule
+            it.INSTANCE_TEMPLATE_CYCLE_WEEK AS Week,
+            it.INSTANCE_TEMPLATE_CYCLE_DAY AS DayOfWeek,
+            it.INSTANCE_TEMPLATE_START_TIME AS StartTime,
+            it.INSTANCE_TEMPLATE_END_TIME AS EndTime,
+            it.INSTANCE_TEMPLATE_IS_OPEN AS IsOpen
+
+        FROM dbo.instance_template it
+
+        INNER JOIN dbo.session s
+            ON it.INSTANCE_TEMPLATE_SESSION_KEY = s.SESSION_KEY
+
+        INNER JOIN dbo.asset a
+            ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+
+        INNER JOIN dbo.facility f
+            ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+
+        LEFT JOIN dbo.staff st
+            ON s.SESSION_SURGEON_KEY = st.STAFF_KEY
+
+        WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+        /**FACILITY_FILTER**/
+        /**ASSET_FILTER**/
+
+        ORDER BY
+            it.INSTANCE_TEMPLATE_CYCLE_DAY,
+            it.INSTANCE_TEMPLATE_START_TIME;
+    ";
+
             var parameters = new Dictionary<string, object>
             {
                 ["Week"] = week
             };
 
-            // Apply dynamic filters
             var dynamicSql = sql;
+
             if (facilityId.HasValue)
             {
-                dynamicSql = dynamicSql.Replace("/**FACILITY_FILTER**/", "AND f.id = @FacilityId");
+                dynamicSql = dynamicSql.Replace(
+                    "/**FACILITY_FILTER**/",
+                    "AND f.FACILITY_KEY = @FacilityId");
+
                 parameters["FacilityId"] = facilityId.Value;
             }
             else
@@ -75,7 +102,10 @@ namespace MediHub.Infrastructure.Data.Repositories
 
             if (assetId.HasValue)
             {
-                dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "AND t.id = @AssetId");
+                dynamicSql = dynamicSql.Replace(
+                    "/**ASSET_FILTER**/",
+                    "AND a.ASSET_KEY = @AssetId");
+
                 parameters["AssetId"] = assetId.Value;
             }
             else
@@ -83,10 +113,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                 dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "");
             }
 
-            // Execute query using Dapper-style QueryAsync
-            var result = (await QueryAsync<TemplateScheduleDTO>(dynamicSql, parameters)).ToList();
-
-            return result;
+            return (await QueryAsync<TemplateScheduleDTO>(
+                dynamicSql,
+                parameters)).ToList();
         }
 
 
@@ -139,26 +168,30 @@ namespace MediHub.Infrastructure.Data.Repositories
         {
             const string sql = @"
                 SELECT
-                    f.id   AS FacilityId,
-                    f.name AS FacilityName,
-                    t.id   AS AssetId,
-                    t.name AS AssetName,
-                    0      AS AssetSortOrder -- placeholder, no sort_order in schema yet
-                FROM dbo.facility f
-                LEFT JOIN dbo.asset t ON t.facility_id = f.id
-                WHERE (@FacilityId = 0 OR f.id = @FacilityId)
+                    f.FACILITY_KEY   AS FacilityId,
+                    f.FACILITY_NAME  AS FacilityName,
+
+                    a.ASSET_KEY      AS AssetId,
+                    a.ASSET_CODE     AS AssetName,
+
+                    0 AS AssetSortOrder -- placeholder until column exists
+
+                FROM FACILITY f
+
+                LEFT JOIN ASSET a
+                    ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+
+                WHERE (@FacilityId = 0 OR f.FACILITY_KEY = @FacilityId)
+
                 ORDER BY
-                    f.name,
-                    t.name;
+                    f.FACILITY_NAME,
+                    a.ASSET_CODE;
             ";
 
-            // Parameters for SQL query
             var parameters = new { FacilityId = facilityId };
 
-            // Execute the query into row DTOs
             var rows = await QueryAsync<TemplateMatrixFormatRow>(sql, parameters);
 
-            // Group by facility and build nested structure
             var facilities = rows
                 .GroupBy(r => new { r.FacilityId, r.FacilityName })
                 .Select(fg => new TemplateFacilityFormat(
@@ -425,6 +458,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     -- Asset columns
                     a.ASSET_CODE                      AS AssetCode,
+                    a.ASSET_DESCRIPTION               AS AssetDescription,
                     a.ASSET_LOCATION                  AS AssetLocation,
                     a.ASSET_FACILITY_KEY               AS FacilityId,
 
@@ -436,7 +470,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_IS_ACUTE                AS SessionIsAcute,
                     se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
                     se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
-                    se.SESSION_SURGEION_KEY            AS SurgeonId,
+                    se.SESSION_SURGEON_KEY            AS SurgeonId,
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
 
@@ -445,6 +479,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     -- Specialty
                     sp.SPECIALTY_CODE                  AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION           AS SpecialtyDescription,
 
                     -- Subspecialty
                     ss.SUBSPECIALTY_NAME               AS SubspecialtyName,
@@ -457,7 +492,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
                 LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
                 LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
-                LEFT JOIN dbo.staff s ON se.SESSION_SURGEION_KEY = s.STAFF_KEY
+                LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
                 LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
                 LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
                 LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
@@ -507,6 +542,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     -- Asset columns
                     a.ASSET_CODE                      AS AssetCode,
+                    a.ASSET_DESCRIPTION               AS AssetDescription,
                     a.ASSET_LOCATION                  AS AssetLocation,
                     a.ASSET_FACILITY_KEY               AS FacilityId,
 
@@ -518,7 +554,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_IS_ACUTE                AS SessionIsAcute,
                     se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
                     se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
-                    se.SESSION_SURGEION_KEY            AS SurgeonId,
+                    se.SESSION_SURGEON_KEY            AS SurgeonId,
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
 
@@ -527,6 +563,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     -- Specialty
                     sp.SPECIALTY_CODE                  AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION           AS SpecialtyDescription,
 
                     -- Subspecialty
                     ss.SUBSPECIALTY_NAME               AS SubspecialtyName,
@@ -539,7 +576,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
                 LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
                 LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
-                LEFT JOIN dbo.staff s ON se.SESSION_SURGEION_KEY = s.STAFF_KEY
+                LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
                 LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
                 LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
                 LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY

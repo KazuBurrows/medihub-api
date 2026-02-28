@@ -10,10 +10,10 @@ namespace MediHub.Infrastructure.Data
 
         public SqlConnectionFactory(IConfiguration config)
         {
-            _connectionString =
-                config["SqlConnectionString"]
-                ?? throw new InvalidOperationException("SQL connection string missing.");
-
+            // _connectionString =
+            //     config["SqlConnectionString"]
+            //     ?? throw new InvalidOperationException("SQL connection string missing.");
+            _connectionString = "Server=s-cdhb.database.windows.net;Database=TheatreSchedule;User ID=testuser;Password=P@ssword123!;Encrypt=True;TrustServerCertificate=True;Connect Timeout=30;Max Pool Size=50;";
 
             // Warm up connection pool on startup
             WarmUp().GetAwaiter().GetResult();

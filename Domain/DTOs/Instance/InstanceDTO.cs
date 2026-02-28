@@ -27,7 +27,7 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_ANAESTHETIC_TYPE")]
         public string? AnaestheticType { get; set; }
 
-        [Column("SESSION_SURGEION_KEY")]
+        [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
         public string? SurgeonName { get; set; }
 

@@ -17,7 +17,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SESSION_IS_ACUTE AS IsAcute,
                     SESSION_IS_PAEDIATRIC AS IsPediatric,
                     SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                    SESSION_SURGEION_KEY AS SurgeonId,
+                    SESSION_SURGEON_KEY AS SurgeonId,
                     SESSION_SPECIALTY_KEY AS SpecialtyId,
                     SESSION_SUBSPECIALTY_KEY AS SubspecialtyId
                 FROM dbo.session
@@ -36,14 +36,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_IS_ACUTE AS IsAcute,
                     s.SESSION_IS_PAEDIATRIC AS IsPediatric,
                     s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                    s.SESSION_SURGEION_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_KEY AS SurgeonId,
                     st.STAFF_NAME AS SurgeonName,
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
                     sp.SPECIALTY_CODE AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
                     s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
                     sub.SUBSPECIALTY_NAME AS SubspecialtyName
                 FROM dbo.session s
-                LEFT JOIN dbo.staff st ON st.STAFF_KEY = s.SESSION_SURGEION_KEY
+                LEFT JOIN dbo.staff st ON st.STAFF_KEY = s.SESSION_SURGEON_KEY
                 LEFT JOIN dbo.specialty sp ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
                 LEFT JOIN dbo.subspecialty sub ON sub.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
                 ORDER BY s.SESSION_TITLE;
@@ -64,7 +65,7 @@ namespace MediHub.Infrastructure.Data.Repositories
             SESSION_IS_ACUTE AS IsAcute,
             SESSION_IS_PAEDIATRIC AS IsPediatric,
             SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-            SESSION_SURGEION_KEY AS SurgeonId,
+            SESSION_SURGEON_KEY AS SurgeonId,
             SESSION_SPECIALTY_KEY AS SpecialtyId,
             SESSION_SUBSPECIALTY_KEY AS SubspecialtyId
         FROM dbo.session
@@ -82,15 +83,16 @@ namespace MediHub.Infrastructure.Data.Repositories
             s.SESSION_IS_ACUTE AS IsAcute,
             s.SESSION_IS_PAEDIATRIC AS IsPediatric,
             s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-            s.SESSION_SURGEION_KEY AS SurgeonId,
+            s.SESSION_SURGEON_KEY AS SurgeonId,
             st.STAFF_NAME AS SurgeonName,
             s.SESSION_SPECIALTY_KEY AS SpecialtyId,
             sp.SPECIALTY_CODE AS SpecialtyCode,
+            sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
             s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
             sub.SUBSPECIALTY_NAME AS SubspecialtyName
         FROM dbo.session s
         LEFT JOIN dbo.staff st
-            ON s.SESSION_SURGEION_KEY = st.STAFF_KEY
+            ON s.SESSION_SURGEON_KEY = st.STAFF_KEY
         LEFT JOIN dbo.specialty sp
             ON s.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
         LEFT JOIN dbo.subspecialty sub
@@ -110,7 +112,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SESSION_IS_ACUTE,
                     SESSION_IS_PAEDIATRIC,
                     SESSION_ANAESTHETIC_TYPE,
-                    SESSION_SURGEION_KEY,
+                    SESSION_SURGEON_KEY,
                     SESSION_SPECIALTY_KEY,
                     SESSION_SUBSPECIALTY_KEY
                 )
@@ -139,7 +141,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SESSION_IS_ACUTE = @IsAcute,
                     SESSION_IS_PAEDIATRIC = @IsPediatric,
                     SESSION_ANAESTHETIC_TYPE = @AnaestheticType,
-                    SESSION_SURGEION_KEY = @SurgeonId,
+                    SESSION_SURGEON_KEY = @SurgeonId,
                     SESSION_SPECIALTY_KEY = @SpecialtyId,
                     SESSION_SUBSPECIALTY_KEY = @SubspecialtyId
                 WHERE SESSION_KEY = @Id";

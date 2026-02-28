@@ -1,5 +1,6 @@
 using MediHub.Application.Interfaces;
 using MediHub.Domain.DTOs;
+using MediHub.Domain.Matrix;
 using MediHub.Domain.Models;
 using MediHub.Infrastructure.Data.Interfaces;
 using MediHub.Infrastructure.Data.Utils;
@@ -68,6 +69,11 @@ namespace MediHub.Application.Services
         public async Task<int> DeleteDTO(int id)
         {
             return await _repository.DeleteDTO(id);
+        }
+
+        public async Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date)
+        {
+            return await _repository.GetAllWeekMatrix(date);
         }
     }
 }

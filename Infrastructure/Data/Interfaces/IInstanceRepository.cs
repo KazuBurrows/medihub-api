@@ -1,4 +1,5 @@
 using MediHub.Domain.DTOs;
+using MediHub.Domain.Matrix;
 using MediHub.Domain.Models;
 
 namespace MediHub.Infrastructure.Data.Interfaces
@@ -17,5 +18,7 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task<InstanceDTO> GetByIdDTO(int id);
         Task<InstanceDTO> UpdateDTO(InstanceDTO i);
         Task<int> DeleteDTO(int id);
+
+        Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date);
     }
 }

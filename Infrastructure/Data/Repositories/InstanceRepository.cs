@@ -1,4 +1,5 @@
 using MediHub.Domain.DTOs;
+using MediHub.Domain.Matrix;
 using MediHub.Domain.Models;
 using MediHub.Infrastructure.Data.Interfaces;
 
@@ -156,7 +157,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 s.SESSION_IS_ACUTE AS SessionIsAcute,
                 s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
                 s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                s.SESSION_SURGEION_KEY AS SurgeonId,
+                s.SESSION_SURGEON_KEY AS SurgeonId,
                 surgeon.STAFF_NAME AS SurgeonName,
 
                 s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -190,7 +191,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
             LEFT JOIN dbo.staff surgeon
-                ON surgeon.STAFF_KEY = s.SESSION_SURGEION_KEY
+                ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
 
             LEFT JOIN dbo.specialty sp
                 ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
@@ -335,7 +336,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_IS_ACUTE AS SessionIsAcute,
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
                     s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                    s.SESSION_SURGEION_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_KEY AS SurgeonId,
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -369,7 +370,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
                 LEFT JOIN dbo.staff surgeon
-                    ON surgeon.STAFF_KEY = s.SESSION_SURGEION_KEY
+                    ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
 
                 LEFT JOIN dbo.specialty sp
                     ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
@@ -508,5 +509,141 @@ namespace MediHub.Infrastructure.Data.Repositories
             return await ExecuteAsync(sql, new { Id = id });
         }
 
+
+        public async Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date)
+        {
+            var startDate = date.ToDateTime(TimeOnly.MinValue);
+            var endDate = date.AddDays(7).ToDateTime(TimeOnly.MaxValue);
+
+            const string sql = @"
+        SELECT 
+            f.FACILITY_KEY AS FacilityId,
+            f.FACILITY_NAME AS FacilityName,
+
+            a.ASSET_KEY AS AssetId,
+            a.ASSET_DESCRIPTION AS AssetDescription,
+
+            i.INSTANCE_KEY AS Id,   -- MUST MATCH DTO
+            f.FACILITY_KEY AS FacilityId,
+            f.FACILITY_NAME AS FacilityName,
+            a.ASSET_KEY AS AssetId,
+            a.ASSET_DESCRIPTION AS AssetDescription,
+
+            i.INSTANCE_SESSION_KEY AS SessionId,
+            s.SESSION_TITLE AS SessionTitle,
+            s.SESSION_IS_ACUTE AS IsAcute,
+            s.SESSION_IS_PAEDIATRIC AS IsPediatric,
+            s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+            s.SESSION_SURGEON_KEY AS SurgeonId,
+            st.STAFF_NAME AS SurgeonName,
+
+            i.INSTANCE_START_DATETIME AS StartDateTime,
+            i.INSTANCE_END_DATETIME AS EndDateTime,
+            i.INSTANCE_IS_OPEN AS IsOpen,
+
+            (SELECT COUNT(*) 
+             FROM INSTANCE_STAFF ist 
+             WHERE ist.INSTANCE_KEY = i.INSTANCE_KEY) AS StaffCount
+
+        FROM FACILITY f
+
+        INNER JOIN ASSET a 
+            ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+
+        LEFT JOIN INSTANCE i 
+            ON i.INSTANCE_ASSET_KEY = a.ASSET_KEY
+            AND i.INSTANCE_START_DATETIME BETWEEN @startDate AND @endDate
+
+        LEFT JOIN SESSION s 
+            ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
+
+        LEFT JOIN STAFF st 
+            ON st.STAFF_KEY = s.SESSION_SURGEON_KEY
+
+        ORDER BY 
+            f.FACILITY_NAME,
+            a.ASSET_DESCRIPTION,
+            i.INSTANCE_START_DATETIME
+    ";
+
+            var lookup = new Dictionary<int, InstanceMatrixFacilityDTO>();
+
+            await QueryAsync<InstanceMatrixFacilityDTO, InstanceMatrixAssetDTO, InstanceMatrixCellDTO, InstanceMatrixFacilityDTO>(
+                sql,
+                (facility, asset, cell) =>
+                {
+                    //--------------------------------------------------
+                    // Facility
+                    //--------------------------------------------------
+
+                    if (!lookup.TryGetValue(facility.FacilityId ?? 0, out var existingFacility))
+                    {
+                        existingFacility = facility;
+                        existingFacility.Assets = new List<InstanceMatrixAssetDTO>();
+
+                        lookup.Add(existingFacility.FacilityId ?? 0, existingFacility);
+                    }
+
+                    //--------------------------------------------------
+                    // Asset
+                    //--------------------------------------------------
+
+                    if (asset != null)
+                    {
+                        var existingAsset = existingFacility.Assets
+                            .FirstOrDefault(a => a.AssetId == asset.AssetId);
+
+                        if (existingAsset == null)
+                        {
+                            existingAsset = asset;
+                            existingAsset.Days = new List<InstanceMatrixDayDTO>();
+
+                            existingFacility.Assets.Add(existingAsset);
+                        }
+
+                        //--------------------------------------------------
+                        // Cell → Day → ADD TO LIST
+                        //--------------------------------------------------
+
+                        if (cell != null && cell.Id != 0)
+                        {
+                            var cellDate = cell.StartDateTime?.Date ?? DateTime.MinValue;
+
+                            var day = existingAsset.Days
+                                .FirstOrDefault(d => d.Date.Date == cellDate);
+
+                            if (day == null)
+                            {
+                                day = new InstanceMatrixDayDTO
+                                {
+                                    Date = cellDate,
+                                    DayName = cellDate.ToString("ddd"),
+                                    Instance = new List<InstanceMatrixCellDTO>()
+                                };
+
+                                existingAsset.Days.Add(day);
+                            }
+
+                            //--------------------------------------------------
+                            // FIX: ADD TO LIST
+                            //--------------------------------------------------
+
+                            day.Instance.Add(cell);
+                        }
+                    }
+
+                    return existingFacility;
+                },
+                new { startDate, endDate },
+
+                //--------------------------------------------------
+                // CRITICAL: splitOn must match SQL order
+                //--------------------------------------------------
+
+                splitOn: "AssetId,Id"
+            );
+
+            return lookup.Values.ToArray();
+        }
     }
 }

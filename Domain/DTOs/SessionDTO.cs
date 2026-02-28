@@ -22,7 +22,7 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_ANAESTHETIC_TYPE")]
         public string? AnaestheticType { get; set; }
 
-        [Column("SESSION_SURGEION_KEY")]
+        [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
         public string? SurgeonName { get; set; }
@@ -31,6 +31,8 @@ namespace MediHub.Domain.DTOs
         public int? SpecialtyId { get; set; }
 
         public string? SpecialtyCode { get; set; }
+
+        public string? SpecialtyDescription { get; set; }
 
         [Column("SESSION_SUBSPECIALTY_KEY")]
         public int? SubspecialtyId { get; set; }

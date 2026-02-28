@@ -40,6 +40,26 @@ namespace MediHub.Infrastructure.Data.Repositories
             );
         }
 
+        
+
+        public async Task<IEnumerable<TReturn>> QueryAsync<TFirst, TSecond, TThird, TReturn>(
+            string sql,
+            Func<TFirst, TSecond, TThird, TReturn> map,
+            object parameters = null,
+            string splitOn = "Id")
+        {
+            await using var conn = await _connectionFactory.GetOpenConnectionAsync();
+
+            return await conn.QueryAsync<TFirst, TSecond, TThird, TReturn>(
+                sql,
+                map,
+                parameters,
+                splitOn: splitOn
+            );
+        }
+
+
+
         /**
         *** Use when: You expect at most one row from a SELECT query.
         **/

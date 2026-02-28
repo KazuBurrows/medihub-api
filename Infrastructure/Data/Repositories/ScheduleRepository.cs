@@ -73,103 +73,161 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<IEnumerable<ScheduleDTO>> GetMatrix(DateTime monday, DateTime sunday, int? facility, int? asset)
-        {
-            // SQL query: join instances, sessions, assets, facilities, staff
-            const string sql = @"
-                SELECT
-                    i.id AS Id,
-                    f.name AS FacilityName,
-                    t.name AS AssetName,
-                    s.name AS SessionName,
-                    s.is_acute AS IsAcute,
-                    s.is_pediatric AS IsPediatric,
-                    s.anaesthetic_type AS AnaestheticType,
-                    CONCAT(st.first_name, ' ', st.last_name) AS SurgeonName,
-                    COUNT(st.id) AS StaffCount,
-                    i.start_datetime AS StartDateTime,
-                    i.end_datetime AS EndDateTime
-                FROM dbo.instance i
-                INNER JOIN dbo.session s ON i.session_id = s.id
-                INNER JOIN dbo.asset t ON i.asset_id = t.id
-                INNER JOIN dbo.facility f ON t.facility_id = f.id
-                LEFT JOIN dbo.staff st ON s.surgeon_id = st.id
-                WHERE i.start_datetime >= @StartDate
-                AND i.end_datetime <= @EndDate
-                /**FACILITY_FILTER**/
-                /**ASSET_FILTER**/
-                GROUP BY
-                    i.id, f.name, t.name, s.name,
-                    s.is_acute, s.is_pediatric, s.anaesthetic_type,
-                    st.first_name, st.last_name,
-                    i.start_datetime, i.end_datetime
-                ORDER BY i.start_datetime;
+        public async Task<IEnumerable<ScheduleDTO>> GetMatrix(
+    DateTime monday,
+    DateTime sunday,
+    int? facility,
+    int? asset)
+{
+    const string sql = @"
+        SELECT
+            i.INSTANCE_KEY AS Id,
 
-                ";
+            f.FACILITY_NAME AS FacilityName,
 
-            // Build dynamic filters
-            var dynamicSql = sql;
-            var parameters = new Dictionary<string, object>
-            {
-                ["StartDate"] = monday,
-                ["EndDate"] = sunday
-            };
+            a.ASSET_DESCRIPTION AS AssetName,
 
-            if (facility.HasValue)
-            {
-                dynamicSql = dynamicSql.Replace("/**FACILITY_FILTER**/", "AND f.id = @Facility");
-                parameters["Facility"] = facility.Value;
-            }
-            else
-            {
-                dynamicSql = dynamicSql.Replace("/**FACILITY_FILTER**/", "");
-            }
+            s.SESSION_TITLE AS SessionName,
 
-            if (asset.HasValue)
-            {
-                dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "AND t.id = @Asset");
-                parameters["Asset"] = asset.Value;
-            }
-            else
-            {
-                dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "");
-            }
+            s.SESSION_IS_ACUTE AS IsAcute,
 
-            // Execute the query
-            return await QueryAsync<ScheduleDTO>(dynamicSql, parameters);
-        }
+            s.SESSION_IS_PAEDIATRIC AS IsPediatric,
+
+            s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+
+            st.STAFF_NAME AS SurgeonName,
+
+            COUNT(ist.INSTANCE_STAFF_KEY) AS StaffCount,
+
+            i.INSTANCE_START_DATETIME AS StartDateTime,
+
+            i.INSTANCE_END_DATETIME AS EndDateTime
+
+        FROM dbo.INSTANCE i
+
+        LEFT JOIN dbo.SESSION s
+            ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
+
+        LEFT JOIN dbo.ASSET a
+            ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
+
+        LEFT JOIN dbo.FACILITY f
+            ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
+
+        LEFT JOIN dbo.STAFF st
+            ON st.STAFF_KEY = s.SESSION_SURGEON_KEY
+
+        LEFT JOIN dbo.INSTANCE_STAFF ist
+            ON ist.INSTANCE_KEY = i.INSTANCE_KEY
+
+        WHERE i.INSTANCE_START_DATETIME >= @StartDate
+        AND i.INSTANCE_END_DATETIME <= @EndDate
+
+        /**FACILITY_FILTER**/
+
+        /**ASSET_FILTER**/
+
+        GROUP BY
+
+            i.INSTANCE_KEY,
+
+            f.FACILITY_NAME,
+
+            a.ASSET_DESCRIPTION,
+
+            s.SESSION_TITLE,
+
+            s.SESSION_IS_ACUTE,
+
+            s.SESSION_IS_PAEDIATRIC,
+
+            s.SESSION_ANAESTHETIC_TYPE,
+
+            st.STAFF_NAME,
+
+            i.INSTANCE_START_DATETIME,
+
+            i.INSTANCE_END_DATETIME
+
+        ORDER BY i.INSTANCE_START_DATETIME;
+    ";
+
+    var dynamicSql = sql;
+
+    var parameters = new Dictionary<string, object>
+    {
+        ["StartDate"] = monday,
+        ["EndDate"] = sunday
+    };
+
+    if (facility.HasValue)
+    {
+        dynamicSql = dynamicSql.Replace(
+            "/**FACILITY_FILTER**/",
+            "AND f.FACILITY_KEY = @Facility");
+
+        parameters["Facility"] = facility.Value;
+    }
+    else
+    {
+        dynamicSql = dynamicSql.Replace("/**FACILITY_FILTER**/", "");
+    }
+
+    if (asset.HasValue)
+    {
+        dynamicSql = dynamicSql.Replace(
+            "/**ASSET_FILTER**/",
+            "AND a.ASSET_KEY = @Asset");
+
+        parameters["Asset"] = asset.Value;
+    }
+    else
+    {
+        dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "");
+    }
+
+    return await QueryAsync<ScheduleDTO>(dynamicSql, parameters);
+}
 
         public async Task<MatrixFormatAgg> GetMatrixFormat(int facilityId)
         {
             const string sql = @"
                 SELECT
-                    f.id   AS FacilityId,
-                    f.name AS FacilityName,
-                    t.id   AS AssetId,
-                    t.name AS AssetName
+                    f.FACILITY_KEY   AS FacilityId,
+                    f.FACILITY_NAME  AS FacilityName,
+                    a.ASSET_KEY      AS AssetId,
+                    a.ASSET_DESCRIPTION AS AssetName
                 FROM dbo.facility f
-                LEFT JOIN dbo.asset t ON t.facility_id = f.id
-                WHERE (@FacilityId = 0 OR f.id = @FacilityId)
+                LEFT JOIN dbo.asset a 
+                    ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                WHERE (@FacilityId = 0 OR f.FACILITY_KEY = @FacilityId)
                 ORDER BY
-                    f.name,
-                    t.name"
-            ;
+                    f.FACILITY_NAME,
+                    a.ASSET_DESCRIPTION
+            ";
 
-            var parameters = new { FacilityId = facilityId };
-
-            var rows = await QueryAsync<MatrixFormatRow>(sql, parameters);
+            var rows = await QueryAsync<MatrixFormatRow>(
+                sql,
+                new { FacilityId = facilityId }
+            );
 
             var facilities = rows
                 .GroupBy(r => new { r.FacilityId, r.FacilityName })
                 .Select(fg => new FacilityFormat(
                     fg.Key.FacilityId,
-                    fg.Key.FacilityName,
-                    fg.Select(t => new AssetFormat(
-                        t.AssetId,
-                        t.AssetName,
-                        0   // no sort_order in schema (yet)
+                    fg.Key.FacilityName ?? "",
+
+                    fg
+                    .Where(a => a.AssetId > 0)
+                    .GroupBy(a => new { a.AssetId, a.AssetName })
+                    .Select(ag => new AssetFormat(
+                        ag.Key.AssetId,
+                        ag.Key.AssetName ?? "",
+                        0
                     ))
+                    .OrderBy(a => a.AssetName)
                 ))
+                .OrderBy(f => f.FacilityName)
                 .ToList();
 
             return new MatrixFormatAgg(facilities);

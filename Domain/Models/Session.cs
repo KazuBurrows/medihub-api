@@ -22,7 +22,7 @@ namespace MediHub.Domain.Models
         [Column("SESSION_ANAESTHETIC_TYPE")]
         public string? AnaestheticType { get; set; }
 
-        [Column("SESSION_SURGEION_KEY")]
+        [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
         [Column("SESSION_SPECIALTY_KEY")]
