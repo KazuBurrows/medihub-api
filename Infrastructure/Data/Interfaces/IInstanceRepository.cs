@@ -11,7 +11,7 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task<int> Update(Instance s);
         Task<IEnumerable<Instance>> GetAll();
         Task<Instance> GetById(int id);
-        Task<IEnumerable<ScheduleDTO>> GetAllByStaffId(int staffId);
+        Task<IEnumerable<InstanceDTO>> GetAllByStaffId(int staffId);
         Task<IEnumerable<InstanceDTO>> GetAllDTO();
 
         Task<int> CreateDTO(InstanceDTO i);

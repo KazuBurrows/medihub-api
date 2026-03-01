@@ -20,7 +20,7 @@ public class StaffEmailItem
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
-            "get", "delete", "put", "options",
+            "get", "options",
             Route = "staff/email/{email}")] HttpRequestData req,
         string email,
         FunctionContext context)

@@ -21,7 +21,7 @@ public class StaffInstanceCollection
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "options",
-            Route = "staffs/{staffId}/instances")] HttpRequestData req,
+            Route = "staff/{staffId}/instances")] HttpRequestData req,
             int staffId,
         FunctionContext context)
     {

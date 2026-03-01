@@ -24,38 +24,123 @@ namespace MediHub.Infrastructure.Data.Repositories
             return await QueryAsync<Instance>(sql);
         }
 
-        public async Task<IEnumerable<ScheduleDTO>> GetAllByStaffId(int staffId)
+        public async Task<IEnumerable<InstanceDTO>> GetAllByStaffId(int staffId)
         {
             const string sql = @"
-                SELECT DISTINCT
-                    i.INSTANCE_KEY AS Id,
-                    f.FACILITY_NAME AS FacilityName,
-                    a.ASSET_DESCRIPTION AS AssetName,
-                    s.SESSION_NAME AS SessionName,
-                    s.SESSION_IS_ACUTE AS IsAcute,
-                    s.SESSION_IS_PAEDIATRIC AS IsPediatric,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                    su.STAFF_FIRST_NAME + ' ' + su.STAFF_LAST_NAME AS SurgeonName,
-                    i.INSTANCE_START_DATETIME AS StartDateTime,
-                    i.INSTANCE_END_DATETIME   AS EndDateTime
-                FROM dbo.instance i
-                INNER JOIN dbo.instance_staff isf
-                    ON isf.INSTANCE_STAFF_INSTANCE_KEY = i.INSTANCE_KEY
-                LEFT JOIN dbo.asset a
-                    ON i.INSTANCE_ASSET_KEY = a.ASSET_KEY
-                LEFT JOIN dbo.facility f
-                    ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
-                LEFT JOIN dbo.session s
-                    ON i.INSTANCE_SESSION_KEY = s.SESSION_KEY
-                LEFT JOIN dbo.staff su
-                    ON s.SESSION_SURGEON_KEY = su.STAFF_KEY
-                WHERE isf.INSTANCE_STAFF_STAFF_KEY = @StaffId
-                ORDER BY i.INSTANCE_START_DATETIME";
 
-            return await QueryAsync<ScheduleDTO>(
+            SELECT
+
+                -- Instance
+                i.INSTANCE_KEY AS Id,
+                i.INSTANCE_SESSION_KEY AS SessionId,
+                i.INSTANCE_ASSET_KEY AS AssetId,
+                i.INSTANCE_START_DATETIME AS StartDatetime,
+                i.INSTANCE_END_DATETIME AS EndDatetime,
+                i.INSTANCE_IS_OPEN AS IsOpen,
+                i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+
+                upd.STAFF_NAME AS LastUpdatedByUserName,
+
+                -- Session
+                s.SESSION_TITLE AS SessionTitle,
+                s.SESSION_IS_ACUTE AS SessionIsAcute,
+                s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
+                s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                s.SESSION_SURGEON_KEY AS SurgeonId,
+                surgeon.STAFF_NAME AS SurgeonName,
+
+                s.SESSION_SPECIALTY_KEY AS SpecialtyId,
+                sp.SPECIALTY_CODE AS SpecialtyCode,
+                sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
+
+                s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
+                subs.SUBSPECIALTY_NAME AS SubspecialtyName,
+
+                -- Asset
+                a.ASSET_CODE AS AssetCode,
+                a.ASSET_LOCATION AS AssetLocation,
+                a.ASSET_DESCRIPTION AS AssetDescription,
+                
+                a.ASSET_FACILITY_KEY AS FacilityId,
+                f.FACILITY_NAME AS FacilityName,
+
+                -- Staff
+                st.STAFF_KEY AS StaffId,
+                st.STAFF_ID,
+                st.STAFF_NAME,
+                st.STAFF_EMAIL,
+
+                st.STAFF_SPECIALTY_KEY AS SpecialtyId,
+                sps.SPECIALTY_CODE,
+                sps.SPECIALTY_DESCRIPTION,
+
+                r.ROLE_KEY AS RoleId,
+                r.ROLE_NAME AS RoleName
+
+            FROM dbo.instance i
+
+            LEFT JOIN dbo.session s
+                ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
+
+            LEFT JOIN dbo.staff surgeon
+                ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
+
+            LEFT JOIN dbo.specialty sp
+                ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
+
+            LEFT JOIN dbo.subspecialty subs
+                ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
+
+            LEFT JOIN dbo.asset a
+                ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
+
+            LEFT JOIN dbo.facility f
+                ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
+
+            LEFT JOIN dbo.staff upd
+                ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
+
+            LEFT JOIN dbo.instance_staff ist
+                ON ist.INSTANCE_KEY = i.INSTANCE_KEY
+
+            LEFT JOIN dbo.staff st
+                ON st.STAFF_KEY = ist.STAFF_KEY
+
+            LEFT JOIN dbo.specialty sps
+                ON sps.SPECIALTY_KEY = st.STAFF_SPECIALTY_KEY
+
+            LEFT JOIN dbo.role r
+                ON r.ROLE_KEY = ist.ROLE_KEY
+
+            WHERE ist.STAFF_KEY = @StaffId
+            ";
+
+            var lookup = new Dictionary<int, InstanceDTO>();
+
+            await QueryAsync<InstanceDTO, StaffDTO, InstanceDTO>(
                 sql,
-                new { StaffId = staffId }
+                (instance, staff) =>
+                {
+                    if (!lookup.TryGetValue(instance.Id, out var existing))
+                    {
+                        existing = instance;
+                        existing.Staffs = new List<StaffDTO>();
+                        lookup.Add(existing.Id, existing);
+                    }
+
+                    if (staff != null && staff.StaffId != null)
+                    {
+                        existing.Staffs.Add(staff);
+                    }
+
+                    return existing;
+                },
+                new { StaffId = staffId },
+                splitOn: "StaffId"
             );
+
+            return lookup.Values;
         }
 
         public async Task<Instance?> GetById(int id)
