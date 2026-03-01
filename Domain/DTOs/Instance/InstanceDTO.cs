@@ -34,6 +34,7 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_SPECIALTY_KEY")]
         public int? SpecialtyId { get; set; }
         public string? SpecialtyCode { get; set; }
+        public string? SpecialtyDescription { get; set; }
 
         [Column("SESSION_SUBSPECIALTY_KEY")]
         public int? SubspecialtyId { get; set; }
@@ -49,6 +50,7 @@ namespace MediHub.Domain.DTOs
 
         [Column("ASSET_LOCATION")]
         public string? AssetLocation { get; set; }
+        public string? AssetDescription { get; set; }
 
         [Column("ASSET_FACILITY_KEY")]
         public int? FacilityId { get; set; }

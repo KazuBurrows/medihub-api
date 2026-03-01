@@ -162,6 +162,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 s.SESSION_SPECIALTY_KEY AS SpecialtyId,
                 sp.SPECIALTY_CODE AS SpecialtyCode,
+                sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
 
                 s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
                 subs.SUBSPECIALTY_NAME AS SubspecialtyName,
@@ -169,6 +170,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 -- Asset
                 a.ASSET_CODE AS AssetCode,
                 a.ASSET_LOCATION AS AssetLocation,
+                a.ASSET_DESCRIPTION AS AssetDescription,
+                
                 a.ASSET_FACILITY_KEY AS FacilityId,
                 f.FACILITY_NAME AS FacilityName,
 
@@ -341,6 +344,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
                     sp.SPECIALTY_CODE AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
 
                     s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
                     subs.SUBSPECIALTY_NAME AS SubspecialtyName,
@@ -348,6 +352,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
                     a.ASSET_LOCATION AS AssetLocation,
+                    a.ASSET_DESCRIPTION AS AssetDescription,
+
                     a.ASSET_FACILITY_KEY AS FacilityId,
                     f.FACILITY_NAME AS FacilityName,
 

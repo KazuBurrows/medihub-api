@@ -47,10 +47,10 @@ namespace MediHub.Application.Services
             return await _repository.Delete(id);
         }
 
-        // public async Task<string> ApplyTemplate(DateOnly date, bool force)
-        // {
-        //     return await _repository.ApplyTemplate(date, force);
-        // }
+        public async Task<string> ApplyTemplate(DateOnly date)
+        {
+            return await _repository.ApplyTemplate(date);
+        }
 
         public async Task<IEnumerable<TemplateDTO>> GetAllDTO()
         {

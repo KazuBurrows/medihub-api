@@ -362,83 +362,79 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
 
-        // public async Task<string> ApplyTemplate(DateOnly date, bool force)
-        // {
-        //     _logger.LogInformation("=== ApplyTemplate STARTED === BaseDate: {Date}", date);
+        public async Task<string> ApplyTemplate(DateOnly date)
+        {
+            _logger.LogInformation("=== ApplyTemplate STARTED === BaseDate: {Date}", date);
 
-        //     const string sqlTemplate = @"
-        //         BEGIN TRANSACTION;
+            const string sqlTemplate = @"
+                INSERT INTO dbo.instance 
+                    (INSTANCE_ASSET_KEY, INSTANCE_SESSION_KEY, INSTANCE_START_DATETIME, INSTANCE_END_DATETIME)
+                VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime);
+            ";
 
-        //         INSERT INTO dbo.instance (asset_id, session_id, start_datetime, end_datetime)
-        //         VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime);
+            try
+            {
+                for (int week = 1; week <= 4; week++)
+                {
+                    var weekStartDate = date.AddDays((week - 1) * 7);
+                    _logger.LogInformation("Processing Week {Week} | WeekStartDate: {WeekStartDate}", week, weekStartDate);
 
-        //         DECLARE @NewInstanceId INT = SCOPE_IDENTITY();
+                    var templates = (await QueryAsync<Template>(@"
+                        SELECT 
+                            INSTANCE_TEMPLATE_KEY         AS Id,
+                            INSTANCE_TEMPLATE_SESSION_KEY AS SessionId,
+                            INSTANCE_TEMPLATE_ASSET_KEY   AS AssetId,
+                            INSTANCE_TEMPLATE_CYCLE_WEEK  AS CycleWeek,
+                            INSTANCE_TEMPLATE_CYCLE_DAY   AS CycleDay,
+                            INSTANCE_TEMPLATE_START_TIME  AS StartTime,
+                            INSTANCE_TEMPLATE_END_TIME    AS EndTime
+                        FROM dbo.instance_template
+                        WHERE INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+                        AND INSTANCE_TEMPLATE_IS_OPEN = 1
+                    ", new { Week = week })).ToList();
 
-        //         COMMIT;
-        //     ";
+                    if (!templates.Any())
+                    {
+                        _logger.LogWarning("No active templates found for week {Week}", week);
+                        continue;
+                    }
+
+                    foreach (var t in templates)
+                    {
+                        if (!t.StartTime.HasValue || !t.EndTime.HasValue || !t.CycleDay.HasValue)
+                        {
+                            _logger.LogWarning("Template {TemplateId} skipped due to missing data", t.Id);
+                            continue;
+                        }
+
+                        var startDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
+                                                .AddDays(t.CycleDay.Value - 1)
+                                                .Add(t.StartTime.Value);
+
+                        var endDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
+                                                .AddDays(t.CycleDay.Value - 1)
+                                                .Add(t.EndTime.Value);
+
+                        await ExecuteAsync(sqlTemplate, new
+                        {
+                            SessionId = t.SessionId,
+                            AssetId = t.AssetId,
+                            StartDateTime = startDateTime,
+                            EndDateTime = endDateTime
+                        });
+                    }
+                }
+
+                return $"ApplyTemplate completed successfully.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "ApplyTemplate CRASHED for BaseDate {Date}", date);
+                throw;
+            }
+        }
 
 
-
-        //     try
-        //     {
-        //         // Loop through weeks 1 to 4
-        //         for (int week = 1; week <= 4; week++)
-        //         {
-        //             var weekStartDate = date.AddDays((week - 1) * 7);
-        //             _logger.LogInformation("Processing Week {Week} | WeekStartDate: {WeekStartDate}", week, weekStartDate);
-
-        //             var templates = (await QueryAsync<Template>(@"
-        //                 SELECT 
-        //                     id,
-        //                     session_id  AS SessionId,
-        //                     asset_id  AS AssetId,
-        //                     week,
-        //                     day_of_week AS DayOfWeek,
-        //                     start_time  AS StartTime,
-        //                     end_time    AS EndTime
-        //                 FROM dbo.instance_template
-        //                 WHERE week = @Week AND is_open = 1
-        //             ", new { Week = week })).ToList();
-
-        //             if (!templates.Any())
-        //             {
-        //                 _logger.LogWarning("No active templates found for week {Week}", week);
-        //                 continue;
-        //             }
-
-
-
-        //             // ---- Insert loop ----
-        //             foreach (var t in templates)
-        //             {
-        //                 var startDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
-        //                         .Add(t.StartTime.Value)  // unwrap nullable
-        //                         .AddDays(t.DayOfWeek.Value - 1);
-
-        //                 var endDateTime = weekStartDate.ToDateTime(TimeOnly.MinValue)
-        //                                               .Add(t.EndTime.Value)
-        //                                               .AddDays(t.DayOfWeek.Value - 1);
-
-        //                 await QueryAsync<int>(sqlTemplate, new
-        //                 {
-        //                     TemplateId = t.Id,
-        //                     SessionId = t.SessionId,
-        //                     AssetId = t.AssetId,
-        //                     StartDateTime = startDateTime,
-        //                     EndDateTime = endDateTime
-        //                 });
-        //             }
-
-        //         }
-
-        //         return $"ApplyTemplate completed successfully.";
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         _logger.LogCritical(ex, "ApplyTemplate CRASHED for BaseDate {Date}", date);
-        //         throw; // important — let Azure know it failed
-        //     }
-        // }
 
         public async Task<IEnumerable<TemplateDTO>> GetAllDTO()
         {
