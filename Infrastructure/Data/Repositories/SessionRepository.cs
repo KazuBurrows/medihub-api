@@ -1,3 +1,4 @@
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.DTOs;
 using MediHub.Domain.Models;
 using MediHub.Infrastructure.Data.Interfaces;
@@ -151,13 +152,17 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
 
-        public async Task<int> Delete(int id)
+        public async Task Delete(int id)
         {
             const string sql = @"
                 DELETE FROM dbo.session
                 WHERE SESSION_KEY = @Id";
 
-            return await ExecuteAsync(sql, new { Id = id });
+            var rowsAffected = await ExecuteAsync(sql, new { Id = id });
+            if (rowsAffected == 0)
+            {
+                throw new NotFoundException($"No item found with ID {id}.");
+            }
         }
 
     }

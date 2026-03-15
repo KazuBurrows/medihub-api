@@ -32,19 +32,19 @@ namespace MediHub.Application.Services
             return await _repository.GetByIdDTO(id);
         }
 
-        public async Task<TemplateDTO> CreateTemplateDTO(int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool force)
+        public async Task<TemplateDTO> CreateTemplateDTO(int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force)
         {
-            return await _repository.CreateTemplateDTO(sessionId, assetId, week, dayOfWeek, starTime, endTime, force);
+            return await _repository.CreateTemplateDTO(sessionId, assetId, week, dayOfWeek, starTime, endTime, isOpen, force);
         }
 
-        public async Task<TemplateDTO> PutTemplateDTO(int id, int sessionId, int assetId, int week, byte dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool force)
+        public async Task<TemplateDTO> PutTemplateDTO(int id, int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force)
         {
-            return await _repository.PutTemplateDTO(id, sessionId, assetId, week, dayOfWeek, starTime, endTime, force);
+            return await _repository.PutTemplateDTO(id, sessionId, assetId, week, dayOfWeek, starTime, endTime, isOpen, force);
         }
 
-        public async Task<int> Delete(int id)
+        public async Task Delete(int id)
         {
-            return await _repository.Delete(id);
+            await _repository.Delete(id);
         }
 
         public async Task<string> ApplyTemplate(DateOnly date)
@@ -55,6 +55,11 @@ namespace MediHub.Application.Services
         public async Task<IEnumerable<TemplateDTO>> GetAllDTO()
         {
             return await _repository.GetAllDTO();
+        }
+
+        public async Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week)
+        {
+            return await _repository.GetAllDTOByWeek(week);
         }
 
         public async Task<Template> GetById(int id)

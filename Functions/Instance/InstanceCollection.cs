@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -39,17 +40,23 @@ public class InstanceCollection
         // POST /instance
         if (req.Method == "POST")
         {
-            var (data, errorResponse) =
-                await req.ReadJsonBodyAsync<Domain.Models.Instance>();
-
+            var (input, errorResponse) = await RequestValidator.ReadAndValidateAsync<Domain.Models.Instance>(req);
             if (errorResponse != null)
                 return errorResponse;
 
-            var created = await _instanceService.Create(data!);
-
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+             try
+            {
+                var instance = await _instanceService.Create(input);
+                return await ApiResponseFactory.Success<Domain.Models.Instance>(req, "Instance", instance, ActionType.Created);
+            }
+            catch (ConflictException ex)
+            {
+                return await ApiResponseFactory.Conflict(req, ex.Message, ex.ConflictingIds);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
         
 

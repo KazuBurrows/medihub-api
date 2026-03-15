@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,23 +23,15 @@ public class FacilityItem
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
             Route = "facility/{id}")] HttpRequestData req,
-        string id,
+        int id,
         FunctionContext context)
     {
          var log = context.GetLogger("FacilityItem");
 
-        // Validate ID safely
-        if (!int.TryParse(id, out var facilityId))
-        {
-            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid facility id.");
-            return bad;
-        }
-
 
         if (req.Method == "GET")
         {
-            var facility = await _facilityService.GetById(facilityId);
+            var facility = await _facilityService.GetById(id);
 
             if (facility == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -51,12 +44,38 @@ public class FacilityItem
 
         if (req.Method == "DELETE")
         {
-            var deleted = await _facilityService.Delete(facilityId);
+            try
+            {
+                await _facilityService.Delete(id);
 
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
+                var success = new ApiResponse
+                {
+                    Title = "Successfully Deleted",
+                    Status = 202,
+                    Detail = $"Item with id {id} was successfully deleted.",
+                    Extensions = new Dictionary<string, object>
+                    {
+                        { "deletedId", id }
+                    }
+                };
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(success);
 
-            return req.CreateResponse(HttpStatusCode.NoContent);
+                return response;
+            }
+            catch (NotFoundException ex)
+            {
+                var error = new ApiResponse
+                {
+                    Title = "Not Found",
+                    Status = 404,
+                    Detail = ex.Message
+                };
+
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+                await notFoundResponse.WriteAsJsonAsync(error);
+                return notFoundResponse;
+            }
         }
 
 
@@ -68,7 +87,7 @@ public class FacilityItem
                 return errorResponse;
 
             // OPTIONAL: Validate body ID if it exists
-            if (data!.Id != 0 && data.Id != facilityId)
+            if (data!.Id != 0 && data.Id != id)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                 await bad.WriteStringAsync(
@@ -78,7 +97,7 @@ public class FacilityItem
             }
 
             // Force route ID to be authoritative
-            data.Id = facilityId;
+            data.Id = id;
 
             var updated = await _facilityService.Update(data);
 

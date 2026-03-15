@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.DTOs;
 using MediHub.Functions.Helpers;
 using MediHub.Functions.Helpers.Exceptions;
@@ -46,53 +47,38 @@ public class InstanceDTOItem
         // PUT
         if (req.Method == "PUT")
         {
+            var (input, errorResponse) = await RequestValidator.ReadAndValidateAsync<Domain.DTOs.InstanceDTO>(req);
+            if (errorResponse != null)
+                return errorResponse;
             try
             {
-                // Parse the request body as InstanceDTO
-                var data = await req.ReadFromJsonAsync<InstanceDTO>();
-                if (data == null)
-                {
-                    log.LogWarning($"PUT request body for instance {id} was null or invalid.");
-                    return req.CreateResponse(HttpStatusCode.BadRequest);
-                }
+                input.Id = id;
+                var instance = await _instanceService.UpdateDTO(input);
 
-                // Log the incoming data
-                log.LogInformation($"PUT request for instance {id} received: {System.Text.Json.JsonSerializer.Serialize(data)}");
-
-                // Ensure the ID from the route matches the DTO ID (optional, for safety)
-                data.Id = id;
-
-                // Update the instance via your service
-                var updatedInstance = await _instanceService.UpdateDTO(data);
-
-                if (updatedInstance == null)
-                    return req.CreateResponse(HttpStatusCode.NotFound);
-
-                // Return the updated instance
-                var ok = req.CreateResponse(HttpStatusCode.OK);
-                await ok.WriteAsJsonAsync(updatedInstance);
-                return ok;
+                return await ApiResponseFactory.Success<Domain.DTOs.InstanceDTO>(req, "Instance", instance, ActionType.Updated);
             }
-            catch (Exception ex)
+            catch (ConflictException ex)
             {
-                log.LogError($"Error updating instance {id}: {ex.Message}");
-                var errorResp = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResp.WriteStringAsync($"Error updating instance: {ex.Message}");
-                return errorResp;
+                return await ApiResponseFactory.Conflict(req, ex.Message, ex.ConflictingIds);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
             }
         }
 
         // DELETE
         if (req.Method == "DELETE")
         {
-            var deleted = await _instanceService.DeleteDTO(id);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(deleted);
-            return ok;
+            try
+            {
+                await _instanceService.DeleteDTO(id);
+                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

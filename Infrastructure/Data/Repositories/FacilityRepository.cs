@@ -1,3 +1,4 @@
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.Models;
 using MediHub.Infrastructure.Data.Interfaces;
 
@@ -10,15 +11,15 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<IEnumerable<Facility>> GetAll()
         {
             const string sql = @"
-        SELECT
-            FACILITY_KEY               AS Id,
-            FACILITY_CODE              AS Code,
-            FACILITY_NAME              AS Name,
-            FACILITY_TYPE_CODE         AS TypeCode,
-            FACILITY_TYPE_DESCRIPTION  AS TypeDescription,
-            FACILITY_DHB_CODE          AS DhbCode,
-            FACILITY_DHB_NAME          AS DhbName
-        FROM dbo.facility";
+                SELECT
+                    FACILITY_KEY               AS Id,
+                    FACILITY_CODE              AS Code,
+                    FACILITY_NAME              AS Name,
+                    FACILITY_TYPE_CODE         AS TypeCode,
+                    FACILITY_TYPE_DESCRIPTION  AS TypeDescription,
+                    FACILITY_DHB_CODE          AS DhbCode,
+                    FACILITY_DHB_NAME          AS DhbName
+                FROM dbo.facility";
 
             return await QueryAsync<Facility>(sql);
         }
@@ -28,16 +29,16 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<Facility?> GetById(int id)
         {
             const string sql = @"
-        SELECT
-            FACILITY_KEY               AS Id,
-            FACILITY_CODE              AS Code,
-            FACILITY_NAME              AS Name,
-            FACILITY_TYPE_CODE         AS TypeCode,
-            FACILITY_TYPE_DESCRIPTION  AS TypeDescription,
-            FACILITY_DHB_CODE          AS DhbCode,
-            FACILITY_DHB_NAME          AS DhbName
-        FROM dbo.facility
-        WHERE FACILITY_KEY = @Id";
+                SELECT
+                    FACILITY_KEY               AS Id,
+                    FACILITY_CODE              AS Code,
+                    FACILITY_NAME              AS Name,
+                    FACILITY_TYPE_CODE         AS TypeCode,
+                    FACILITY_TYPE_DESCRIPTION  AS TypeDescription,
+                    FACILITY_DHB_CODE          AS DhbCode,
+                    FACILITY_DHB_NAME          AS DhbName
+                FROM dbo.facility
+                WHERE FACILITY_KEY = @Id";
 
             return await QuerySingleOrDefaultAsync<Facility>(
                 sql,
@@ -49,23 +50,23 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<int> Create(Facility f)
         {
             const string sql = @"
-        INSERT INTO dbo.facility (
-            FACILITY_CODE,
-            FACILITY_NAME,
-            FACILITY_TYPE_CODE,
-            FACILITY_TYPE_DESCRIPTION,
-            FACILITY_DHB_CODE,
-            FACILITY_DHB_NAME
-        )
-        OUTPUT INSERTED.FACILITY_KEY
-        VALUES (
-            @Code,
-            @Name,
-            @TypeCode,
-            @TypeDescription,
-            @DhbCode,
-            @DhbName
-        )";
+                INSERT INTO dbo.facility (
+                    FACILITY_CODE,
+                    FACILITY_NAME,
+                    FACILITY_TYPE_CODE,
+                    FACILITY_TYPE_DESCRIPTION,
+                    FACILITY_DHB_CODE,
+                    FACILITY_DHB_NAME
+                )
+                OUTPUT INSERTED.FACILITY_KEY
+                VALUES (
+                    @Code,
+                    @Name,
+                    @TypeCode,
+                    @TypeDescription,
+                    @DhbCode,
+                    @DhbName
+                )";
 
             return await ExecuteScalarAsync<int>(sql, f);
         }
@@ -75,28 +76,33 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<int> Update(Facility f)
         {
             const string sql = @"
-        UPDATE dbo.facility
-        SET
-            FACILITY_CODE = @Code,
-            FACILITY_NAME = @Name,
-            FACILITY_TYPE_CODE = @TypeCode,
-            FACILITY_TYPE_DESCRIPTION = @TypeDescription,
-            FACILITY_DHB_CODE = @DhbCode,
-            FACILITY_DHB_NAME = @DhbName
-        WHERE FACILITY_KEY = @Id";
+                UPDATE dbo.facility
+                SET
+                    FACILITY_CODE = @Code,
+                    FACILITY_NAME = @Name,
+                    FACILITY_TYPE_CODE = @TypeCode,
+                    FACILITY_TYPE_DESCRIPTION = @TypeDescription,
+                    FACILITY_DHB_CODE = @DhbCode,
+                    FACILITY_DHB_NAME = @DhbName
+                WHERE FACILITY_KEY = @Id";
 
             return await ExecuteAsync(sql, f);
         }
 
 
 
-        public async Task<int> Delete(int id)
+        public async Task Delete(int id)
         {
             const string sql = @"
-        DELETE FROM dbo.facility
-        WHERE FACILITY_KEY = @Id";
+                DELETE FROM dbo.facility
+                WHERE FACILITY_KEY = @Id";
 
-            return await ExecuteAsync(sql, new { Id = id });
+            var rowsAffected = await ExecuteAsync(sql, new { Id = id });
+
+            if (rowsAffected == 0)
+            {
+                throw new NotFoundException($"No item found with ID {id}.");
+            }
         }
 
     }

@@ -6,7 +6,7 @@ namespace MediHub.Infrastructure.Data.Interfaces
     public interface IAssetRepository
     {
         Task<int> Create(Asset t);
-        Task<int> Delete(int id);
+        Task Delete(int id);
         Task<int> Update(Asset t);
         Task<IEnumerable<Asset>> GetAll();
         Task<Asset> GetById(int id);

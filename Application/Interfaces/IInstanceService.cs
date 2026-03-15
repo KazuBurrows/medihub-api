@@ -6,19 +6,20 @@ namespace MediHub.Application.Interfaces
 {
     public interface IInstanceService
     {
-        Task<int> Create(Instance i);
-        Task<int> Delete(int id);
-        Task<int> Update(Instance i);
+        Task<Instance> Create(Instance i);
+        Task Delete(int id);
+        Task<Instance> Update(Instance i);
         Task<IEnumerable<Instance>> GetAll();
         Task<Instance> GetById(int id);
         Task<IEnumerable<InstanceDTO>> GetAllByStaffId(int staffId);
 
         Task<IEnumerable<InstanceDTO>> GetAllDTO();
+        Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate);
 
-        Task<int> CreateDTO(InstanceDTO i);
+        Task<InstanceDTO> CreateDTO(InstanceDTO i);
         Task<InstanceDTO> GetByIdDTO(int id);
         Task<InstanceDTO> UpdateDTO(InstanceDTO i);
-        Task<int> DeleteDTO(int id);
+        Task DeleteDTO(int id);
 
         Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date);
     }

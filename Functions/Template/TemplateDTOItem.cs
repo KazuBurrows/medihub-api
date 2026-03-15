@@ -1,6 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Net;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.DTOs;
 using MediHub.Functions.Helpers;
 using MediHub.Functions.Helpers.Exceptions;
@@ -22,7 +24,7 @@ public class TemplateDTOItem
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
-            "get", "put", "post", "delete", "options",
+            "get", "put", "options",
                     Route = "template/{id:int}/detail")] HttpRequestData req,
         int id,
         FunctionContext context)
@@ -43,75 +45,34 @@ public class TemplateDTOItem
         }
 
 
-        var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-
-        // Required numeric params
-        if (!int.TryParse(query["sessionId"], out var sessionId))
-            return await HttpResponses.BadRequest(req, "Invalid or missing sessionId");
-
-        if (!int.TryParse(query["assetId"], out var assetId))
-            return await HttpResponses.BadRequest(req, "Invalid or missing assetId");
-
-        if (!int.TryParse(query["week"], out var week))
-            return await HttpResponses.BadRequest(req, "Invalid or missing week");
-
-        if (!byte.TryParse(query["dayOfWeek"], out var dayOfWeekByte))
-            return await HttpResponses.BadRequest(req, "Invalid or missing dayOfWeek");
-
-        // Safe TimeSpan parsing
-        if (!TimeSpan.TryParseExact(query["startTime"], @"hh\:mm", CultureInfo.InvariantCulture, out var startTime))
-            return await HttpResponses.BadRequest(req, "Invalid or missing startTime");
-
-        if (!TimeSpan.TryParseExact(query["endTime"], @"hh\:mm", CultureInfo.InvariantCulture, out var endTime))
-            return await HttpResponses.BadRequest(req, "Invalid or missing endTime");
-
-        if (!bool.TryParse(query["force"], out var force))
-            return await HttpResponses.BadRequest(req, "Invalid or missing force");
-
-        // Optional staff IDs
-        var staffIds = query.GetValues("staffs")?
-            .SelectMany(v => v.Split(',', StringSplitOptions.RemoveEmptyEntries))
-            .Select(s => int.TryParse(s, out var i) ? i : (int?)null)
-            .Where(i => i.HasValue)
-            .Select(i => i.Value)
-            .ToList()
-            ?? new List<int>();
-
-        // Call your service
-        TemplateDTO? instance = null;
         if (req.Method == "PUT")
         {
-            instance = await _templateService.PutTemplateDTO(
-                id, sessionId, assetId, week, dayOfWeekByte, startTime, endTime, force);
-        }
-        else if (req.Method == "POST")
-        {
-            try {
-                instance = await _templateService.CreateTemplateDTO(
-                    sessionId, assetId, week, dayOfWeekByte, startTime, endTime, force);
-            }
-            catch (TemplateClashException ex)
+            var (input, errorResponse) = await RequestValidator.ReadAndValidateAsync<TemplateInputDTO>(req);
+            if (errorResponse != null)
+                return errorResponse;
+            try
             {
-                return await HttpResponses.Conflict(req, ex.Message);
+                var template = await _templateService.PutTemplateDTO(
+                    id,
+                    input.SessionId,
+                    input.AssetId,
+                    input.CycleWeek,
+                    input.CycleDay,
+                    input.StartTime,
+                    input.EndTime,
+                    input.IsOpen,
+                    input.Force
+                );
+                return await ApiResponseFactory.Success<TemplateDTO>(req, "Template", template, ActionType.Updated);
             }
-        }
-
-        if (instance == null)
-            return req.CreateResponse(HttpStatusCode.NotFound);
-
-
-
-        // DELETE
-        if (req.Method == "DELETE")
-        {
-            var deleted = await _templateService.Delete(id);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(deleted);
-            return ok;
+            catch (ConflictException ex)
+            {
+                return await ApiResponseFactory.Conflict(req, ex.Message, ex.ConflictingIds);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

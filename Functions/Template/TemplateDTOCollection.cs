@@ -1,7 +1,11 @@
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
+using MediHub.Domain.DTOs;
 using MediHub.Functions.Helpers;
+using MediHub.Functions.Helpers.Exceptions;
 using MediHub.Infrastructure.Data.Utils;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,7 +26,7 @@ public class TemplateDTOCollection
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
-            "get", "options",
+            "get", "post", "options",
             Route = "templates/detail")] HttpRequestData req,
             FunctionContext context)
     {
@@ -32,10 +36,39 @@ public class TemplateDTOCollection
         if (req.Method == "GET")
         {
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            var templates = await _templateService.GetAllDTO();
+            IEnumerable<TemplateDTO> templates;
+
+            templates = await _templateService.GetAllDTO();
+
             await ok.WriteAsJsonAsync(templates);
 
             return ok;
+        }
+
+        if (req.Method == "POST")
+        {
+            var (input, errorResponse) = await RequestValidator.ReadAndValidateAsync<TemplateInputDTO>(req);
+            if (errorResponse != null)
+                return errorResponse;
+
+            try
+            {
+                var template = await _templateService.CreateTemplateDTO(
+                    input.SessionId,
+                    input.AssetId,
+                    input.CycleWeek,
+                    input.CycleDay,
+                    input.StartTime,
+                    input.EndTime,
+                    input.IsOpen,
+                    input.Force
+                );
+                return await ApiResponseFactory.Success<TemplateDTO>(req, "Template", template, ActionType.Created);
+            }
+            catch (ConflictException ex)
+            {
+                return await ApiResponseFactory.Conflict(req, ex.Message, ex.ConflictingIds);
+            }
         }
         
 

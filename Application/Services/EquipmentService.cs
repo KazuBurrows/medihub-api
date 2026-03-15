@@ -18,9 +18,9 @@ namespace MediHub.Application.Services
             return _repository.Create(e);
         }
 
-        public Task<int> Delete(int id)
+        public async Task Delete(int id)
         {
-            return _repository.Delete(id);
+            await _repository.Delete(id);
         }
 
         public Task<int> Update(Equipment e)

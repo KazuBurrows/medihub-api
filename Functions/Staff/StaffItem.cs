@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,23 +23,15 @@ public class StaffItem
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
             Route = "staff/{id}")] HttpRequestData req,
-        string id,
+        int id,
         FunctionContext context)
     {
         var log = context.GetLogger("StaffItem");
-        
-        // Validate ID safely
-        if (!int.TryParse(id, out var staffId))
-        {
-            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid staff id.");
-            return bad;
-        }
 
         // GET /staff/{id}
         if (req.Method == "GET")
         {
-            var staff = await _staffService.GetById(staffId);
+            var staff = await _staffService.GetById(id);
 
             if (staff == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -51,12 +44,15 @@ public class StaffItem
         // DELETE /staff/{id}
         if (req.Method == "DELETE")
         {
-            var deleted = await _staffService.Delete(staffId);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            return req.CreateResponse(HttpStatusCode.NoContent);
+            try
+            {
+                await _staffService.Delete(id);
+                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
         // PUT /staff/{id}
@@ -68,7 +64,7 @@ public class StaffItem
                 return errorResponse;
 
             // OPTIONAL: Validate body ID if it exists
-            if (data!.Id != 0 && data.Id != staffId)
+            if (data!.Id != 0 && data.Id != id)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                 await bad.WriteStringAsync(
@@ -78,7 +74,7 @@ public class StaffItem
             }
 
             // Force route ID to be authoritative
-            data.Id = staffId;
+            data.Id = id;
 
             var updated = await _staffService.Update(data);
 

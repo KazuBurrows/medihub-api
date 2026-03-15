@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,15 +23,12 @@ public class TemplateItem
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
-            "get", "post", "put", "delete", "options",
+            "get", "delete", "options",
                     Route = "template/{id}")] HttpRequestData req,
         int id,
         FunctionContext context)
     {
         var log = context.GetLogger("TemplateItem");
-
-        var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-    
 
         if (req.Method == "GET")
         {
@@ -44,50 +42,18 @@ public class TemplateItem
             return ok;
         }
 
-        // POST
-        // if (req.Method == "POST")
-        // {
-        //     var res = await _templateService.ApplyTemplate(id, force);
-
-        //     var response = req.CreateResponse(HttpStatusCode.OK);
-        //     await response.WriteStringAsync(res);
-        //     return response;
-        // }
-
-
-        // PUT /session/{id}
-        if (req.Method == "PUT")
-        {
-            var (data, errorResponse) = await req.ReadJsonBodyAsync<Domain.Models.Template>();
-
-            if (errorResponse != null)
-                return errorResponse;
-
-            data.Id = id;
-            // Log the incoming data
-            log.LogInformation("Received PUT for Template ID {Id}: {Data}", id, System.Text.Json.JsonSerializer.Serialize(data));
-            
-            var updated = await _templateService.Update(data);
-
-            if (updated == null)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
-        }
-
 
         if (req.Method == "DELETE")
         {
-            var deleted = await _templateService.Delete(id);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(deleted);
-            return ok;
+            try
+            {
+                await _templateService.Delete(id);
+                return await ApiResponseFactory.Success(req, "Template", id, ActionType.Deleted);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
 

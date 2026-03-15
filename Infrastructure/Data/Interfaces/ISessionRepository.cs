@@ -6,7 +6,7 @@ namespace MediHub.Infrastructure.Data.Interfaces
     public interface ISessionRepository
     {
         Task<int> Create(Session s);
-        Task<int> Delete(int id);
+        Task Delete(int id);
         Task<int> Update(Session s);
         Task<IEnumerable<Session>> GetAll();
         Task<IEnumerable<SessionDTO>> GetAllDTO();

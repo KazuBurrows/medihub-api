@@ -1,84 +1,81 @@
 using Dapper;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.DTOs;
 using MediHub.Domain.Models;
 using MediHub.Functions.Helpers.Exceptions;
-using MediHub.Infrastructure.Data.Helpers;
 using MediHub.Infrastructure.Data.Interfaces;
-using MediHub.Infrastructure.Data.Utils;
 using Microsoft.Extensions.Logging;
+
 
 namespace MediHub.Infrastructure.Data.Repositories
 {
     public class TemplateRepository : BaseRepository, ITemplateRepository
     {
         private readonly ILogger<TemplateRepository> _logger;
-        private readonly SchedulingClash _schedulingClash;
 
         public TemplateRepository(
             SqlConnectionFactory connectionFactory,
-            ILogger<TemplateRepository> logger,
-            SchedulingClash schedulingClash
+            ILogger<TemplateRepository> logger
         ) : base(connectionFactory)
         {
             _logger = logger;
-            _schedulingClash = schedulingClash;
         }
 
         public async Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(
-    int week,
-    int? facilityId,
-    int? assetId)
+            int week,
+            int? facilityId,
+            int? assetId)
         {
             const string sql = @"
-        SELECT
-            it.INSTANCE_TEMPLATE_KEY AS Id,
+                SELECT
+                    it.INSTANCE_TEMPLATE_KEY AS Id,
 
-            -- Facility
-            f.FACILITY_KEY AS FacilityId,
-            f.FACILITY_NAME AS FacilityName,
+                    -- Facility
+                    f.FACILITY_KEY AS FacilityId,
+                    f.FACILITY_NAME AS FacilityName,
 
-            -- Asset
-            a.ASSET_KEY AS AssetId,
-            a.ASSET_CODE AS AssetName,
+                    -- Asset
+                    a.ASSET_KEY AS AssetId,
+                    a.ASSET_CODE AS AssetName,
 
-            -- Session
-            s.SESSION_TITLE AS SessionName,
-            s.SESSION_IS_PAEDIATRIC AS IsPediatric,
-            s.SESSION_IS_ACUTE AS IsAcute,
-            s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    -- Session
+                    s.SESSION_TITLE AS SessionName,
+                    s.SESSION_IS_PAEDIATRIC AS IsPediatric,
+                    s.SESSION_IS_ACUTE AS IsAcute,
+                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
 
-            -- Surgeon
-            st.STAFF_NAME AS SurgeonName,
+                    -- Surgeon
+                    st.STAFF_NAME AS SurgeonName,
 
-            -- Schedule
-            it.INSTANCE_TEMPLATE_CYCLE_WEEK AS Week,
-            it.INSTANCE_TEMPLATE_CYCLE_DAY AS DayOfWeek,
-            it.INSTANCE_TEMPLATE_START_TIME AS StartTime,
-            it.INSTANCE_TEMPLATE_END_TIME AS EndTime,
-            it.INSTANCE_TEMPLATE_IS_OPEN AS IsOpen
+                    -- Schedule
+                    it.INSTANCE_TEMPLATE_CYCLE_WEEK AS Week,
+                    it.INSTANCE_TEMPLATE_CYCLE_DAY AS DayOfWeek,
+                    it.INSTANCE_TEMPLATE_START_TIME AS StartTime,
+                    it.INSTANCE_TEMPLATE_END_TIME AS EndTime,
+                    it.INSTANCE_TEMPLATE_IS_OPEN AS IsOpen
 
-        FROM dbo.instance_template it
+                FROM dbo.instance_template it
 
-        INNER JOIN dbo.session s
-            ON it.INSTANCE_TEMPLATE_SESSION_KEY = s.SESSION_KEY
+                INNER JOIN dbo.session s
+                    ON it.INSTANCE_TEMPLATE_SESSION_KEY = s.SESSION_KEY
 
-        INNER JOIN dbo.asset a
-            ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                INNER JOIN dbo.asset a
+                    ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
 
-        INNER JOIN dbo.facility f
-            ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                INNER JOIN dbo.facility f
+                    ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
 
-        LEFT JOIN dbo.staff st
-            ON s.SESSION_SURGEON_KEY = st.STAFF_KEY
+                LEFT JOIN dbo.staff st
+                    ON s.SESSION_SURGEON_KEY = st.STAFF_KEY
 
-        WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
-        /**FACILITY_FILTER**/
-        /**ASSET_FILTER**/
+                WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+                /**FACILITY_FILTER**/
+                /**ASSET_FILTER**/
 
-        ORDER BY
-            it.INSTANCE_TEMPLATE_CYCLE_DAY,
-            it.INSTANCE_TEMPLATE_START_TIME;
-    ";
+                ORDER BY
+                    it.INSTANCE_TEMPLATE_CYCLE_DAY,
+                    it.INSTANCE_TEMPLATE_START_TIME;
+            ";
 
             var parameters = new Dictionary<string, object>
             {
@@ -213,60 +210,83 @@ namespace MediHub.Infrastructure.Data.Repositories
             int sessionId,
             int assetId,
             int week,
-            byte dayOfWeek,
+            int dayOfWeek,
             TimeSpan startTime,
             TimeSpan endTime,
+            bool isOpen,
             bool force)
         {
-            /* ---------------- TEMPLATE CLASH CHECK ---------------- */
-
-            // Convert to DateTime purely so we can reuse the same overlap logic style
-            var baseDate = DateTime.Today;
-            int diff = (7 + (dayOfWeek - (int)baseDate.DayOfWeek)) % 7;
-            var templateDate = baseDate.AddDays(diff);
-
-            var start = templateDate.Date + startTime;
-            var end = templateDate.Date + endTime;
-
-            var conflictMessage = await _schedulingClash.CheckForTemplateClashes(
-                null,          // null because this is CREATE
-                assetId,
-                week,
-                dayOfWeek,
-                start,
-                end
+            var conflicts = await QueryAsync<TemplateDTO>(
+                @"
+                SELECT 
+                    t.INSTANCE_TEMPLATE_KEY AS Id,
+                    t.INSTANCE_TEMPLATE_ASSET_KEY AS AssetId,
+                    t.INSTANCE_TEMPLATE_CYCLE_WEEK AS CycleWeek,
+                    t.INSTANCE_TEMPLATE_CYCLE_DAY AS CycleDay,
+                    t.INSTANCE_TEMPLATE_START_TIME AS StartTime,
+                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime
+                FROM dbo.fnCheckInstanceTemplateConflict(
+                    @AssetKey,
+                    @CycleWeek,
+                    @CycleDay,
+                    @StartTime,
+                    @EndTime,
+                    @IgnoreKey
+                ) t",
+                new {
+                    AssetKey = assetId,
+                    CycleWeek = week,
+                    CycleDay = dayOfWeek,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    IgnoreKey = (int?)null
+                }
             );
 
-            if (!force && conflictMessage != null)
-                throw new TemplateClashException(conflictMessage);
+            if (conflicts.Any())
+            {
+                _logger.LogInformation("Conflicts count: {Count}", conflicts.Count());
+
+                List<int> ids = conflicts.Select(c => c.Id).ToList();
+                // 2️⃣ Throw a controlled exception
+                throw new ConflictException(ids);
+            }
 
             const string sql = @"
-                BEGIN TRANSACTION;
+                INSERT INTO dbo.instance_template
+                (
+                    INSTANCE_TEMPLATE_SESSION_KEY,
+                    INSTANCE_TEMPLATE_ASSET_KEY,
+                    INSTANCE_TEMPLATE_CYCLE_WEEK,
+                    INSTANCE_TEMPLATE_CYCLE_DAY,
+                    INSTANCE_TEMPLATE_START_TIME,
+                    INSTANCE_TEMPLATE_END_TIME,
+                    INSTANCE_TEMPLATE_IS_OPEN
+                )
+                VALUES
+                (
+                    @SessionId,
+                    @AssetId,
+                    @Week,
+                    @DayOfWeek,
+                    @StartTime,
+                    @EndTime,
+                    @IsOpen
+                );
 
-                -- Insert new template
-                INSERT INTO dbo.instance_template (session_id, asset_id, week, day_of_week, start_time, end_time)
-                VALUES (@SessionId, @AssetId, @Week, @DayOfWeek, @StartTime, @EndTime);
-
-                -- Get the new template ID
-                DECLARE @NewId INT = SCOPE_IDENTITY();
-
-                COMMIT;
-
-                -- Return the new template ID for retrieval
-                SELECT @NewId AS Id;
+                SELECT CAST(SCOPE_IDENTITY() AS INT);
             ";
 
-            var parameters = new
+            var newId = (await QueryAsync<int>(sql, new
             {
                 SessionId = sessionId,
                 AssetId = assetId,
                 Week = week,
                 DayOfWeek = dayOfWeek,
                 StartTime = startTime,
-                EndTime = endTime
-            };
-
-            var newId = (await QueryAsync<int>(sql, parameters)).First();
+                EndTime = endTime,
+                IsOpen = isOpen
+            })).First();
 
             return await GetByIdDTO(newId);
         }
@@ -278,36 +298,48 @@ namespace MediHub.Infrastructure.Data.Repositories
             int sessionId,
             int assetId,
             int week,
-            byte dayOfWeek,
+            int dayOfWeek,
             TimeSpan startTime,
             TimeSpan endTime,
+            bool isOpen,
             bool force)
         {
 
-            /* ---------------- TEMPLATE CLASH CHECK ---------------- */
-
-            // Convert template slot into a comparable DateTime range
-            // (Use any fixed base date — only time + day alignment matters)
-            var baseDate = DateTime.Today;
-
-            // Align base date to requested DayOfWeek
-            int diff = (7 + (dayOfWeek - (int)baseDate.DayOfWeek)) % 7;
-            var templateDate = baseDate.AddDays(diff);
-
-            var start = templateDate.Date + startTime;
-            var end = templateDate.Date + endTime;
-
-            var conflictMessage = await _schedulingClash.CheckForTemplateClashes(
-                id,
-                assetId,
-                week,
-                dayOfWeek,
-                start,
-                end
+            var conflicts = await QueryAsync<TemplateDTO>(
+                @"
+                SELECT 
+                    t.INSTANCE_TEMPLATE_KEY AS Id,
+                    t.INSTANCE_TEMPLATE_ASSET_KEY AS AssetId,
+                    t.INSTANCE_TEMPLATE_CYCLE_WEEK AS CycleWeek,
+                    t.INSTANCE_TEMPLATE_CYCLE_DAY AS CycleDay,
+                    t.INSTANCE_TEMPLATE_START_TIME AS StartTime,
+                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime
+                FROM dbo.fnCheckInstanceTemplateConflict(
+                    @AssetKey,
+                    @CycleWeek,
+                    @CycleDay,
+                    @StartTime,
+                    @EndTime,
+                    @IgnoreKey
+                ) t",
+                new {
+                    AssetKey = assetId,
+                    CycleWeek = week,
+                    CycleDay = dayOfWeek,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    IgnoreKey = id
+                }
             );
 
-            if (!force && conflictMessage != null)
-                throw new TemplateClashException(conflictMessage);
+            if (conflicts.Any())
+            {
+                _logger.LogInformation("Conflicts count: {Count}", conflicts.Count());
+
+                List<int> ids = conflicts.Select(c => c.Id).ToList();
+                // 2️⃣ Throw a controlled exception
+                throw new ConflictException(ids);
+            }
 
             const string sql = @"
                 BEGIN TRANSACTION;
@@ -320,6 +352,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_TEMPLATE_CYCLE_DAY = @DayOfWeek,
                     INSTANCE_TEMPLATE_START_TIME = @StartTime,
                     INSTANCE_TEMPLATE_END_TIME = @EndTime,
+                    INSTANCE_TEMPLATE_IS_OPEN = @IsOpen,
                     INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME = SYSUTCDATETIME()
                 WHERE INSTANCE_TEMPLATE_KEY = @Id;
 
@@ -341,7 +374,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 Week = week,
                 DayOfWeek = dayOfWeek,
                 StartTime = startTime,
-                EndTime = endTime
+                EndTime = endTime,
+                IsOpen = isOpen
             };
 
             await ExecuteAsync(sql, parameters);
@@ -350,14 +384,19 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Delete(int id)
+        public async Task Delete(int id)
         {
             const string sql = @"
                 DELETE FROM dbo.instance_template
                 WHERE INSTANCE_TEMPLATE_KEY = @Id;
             ";
 
-            return await ExecuteAsync(sql, new { Id = id });
+            var rowsAffected = await ExecuteAsync(sql, new { Id = id });
+
+            if (rowsAffected == 0)
+            {
+                throw new NotFoundException($"No item found with ID {id}.");
+            }
         }
 
 
@@ -368,8 +407,8 @@ namespace MediHub.Infrastructure.Data.Repositories
 
             const string sqlTemplate = @"
                 INSERT INTO dbo.instance 
-                    (INSTANCE_ASSET_KEY, INSTANCE_SESSION_KEY, INSTANCE_START_DATETIME, INSTANCE_END_DATETIME)
-                VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime);
+                    (INSTANCE_ASSET_KEY, INSTANCE_SESSION_KEY, INSTANCE_START_DATETIME, INSTANCE_END_DATETIME, INSTANCE_TEMPLATE_IS_OPEN)
+                VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime, @IsOpen);
             ";
 
             try
@@ -387,7 +426,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                             INSTANCE_TEMPLATE_CYCLE_WEEK  AS CycleWeek,
                             INSTANCE_TEMPLATE_CYCLE_DAY   AS CycleDay,
                             INSTANCE_TEMPLATE_START_TIME  AS StartTime,
-                            INSTANCE_TEMPLATE_END_TIME    AS EndTime
+                            INSTANCE_TEMPLATE_END_TIME    AS EndTime,
+                            INSTANCE_TEMPLATE_IS_OPEN     AS IsOpen,
                         FROM dbo.instance_template
                         WHERE INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
                         AND INSTANCE_TEMPLATE_IS_OPEN = 1
@@ -401,9 +441,12 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     foreach (var t in templates)
                     {
-                        if (!t.StartTime.HasValue || !t.EndTime.HasValue || !t.CycleDay.HasValue)
+                        if (!t.StartTime.HasValue || !t.EndTime.HasValue || !t.CycleDay.HasValue || !t.AssetId.HasValue)
                         {
-                            _logger.LogWarning("Template {TemplateId} skipped due to missing data", t.Id);
+                            _logger.LogWarning(
+                                "Template {TemplateId} skipped due to missing data (StartTime: {StartTime}, EndTime: {EndTime}, CycleDay: {CycleDay}, AssetId: {AssetId})",
+                                t.Id, t.StartTime, t.EndTime, t.CycleDay, t.AssetId
+                            );
                             continue;
                         }
 
@@ -415,12 +458,14 @@ namespace MediHub.Infrastructure.Data.Repositories
                                                 .AddDays(t.CycleDay.Value - 1)
                                                 .Add(t.EndTime.Value);
 
+
                         await ExecuteAsync(sqlTemplate, new
                         {
                             SessionId = t.SessionId,
                             AssetId = t.AssetId,
                             StartDateTime = startDateTime,
-                            EndDateTime = endDateTime
+                            EndDateTime = endDateTime,
+                            IsOpen = t.IsOpen
                         });
                     }
                 }
@@ -498,6 +543,69 @@ namespace MediHub.Infrastructure.Data.Repositories
             return await QueryAsync<TemplateDTO>(sql);
         }
 
+
+        public async Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week)
+        {
+            const string sql = @"
+                SELECT
+                    -- Instance template columns
+                    it.INSTANCE_TEMPLATE_KEY          AS Id,
+                    it.INSTANCE_TEMPLATE_SESSION_KEY  AS SessionId,
+                    it.INSTANCE_TEMPLATE_ASSET_KEY    AS AssetId,
+                    it.INSTANCE_TEMPLATE_CYCLE_WEEK   AS CycleWeek,
+                    it.INSTANCE_TEMPLATE_CYCLE_DAY    AS CycleDay,
+                    it.INSTANCE_TEMPLATE_IS_OPEN      AS IsOpen,
+                    it.INSTANCE_TEMPLATE_START_TIME   AS StartTime,
+                    it.INSTANCE_TEMPLATE_END_TIME     AS EndTime,
+                    it.INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                    it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+
+                    -- Asset columns
+                    a.ASSET_CODE                      AS AssetCode,
+                    a.ASSET_DESCRIPTION               AS AssetDescription,
+                    a.ASSET_LOCATION                  AS AssetLocation,
+                    a.ASSET_FACILITY_KEY              AS FacilityId,
+
+                    -- Facility columns
+                    f.FACILITY_NAME                    AS FacilityName,
+
+                    -- Session columns
+                    se.SESSION_TITLE                   AS SessionTitle,
+                    se.SESSION_IS_ACUTE                AS SessionIsAcute,
+                    se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
+                    se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
+                    se.SESSION_SURGEON_KEY            AS SurgeonId,
+                    se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
+                    se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
+
+                    -- Surgeon columns (staff)
+                    s.STAFF_NAME AS SurgeonName,
+
+                    -- Specialty
+                    sp.SPECIALTY_CODE                  AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION           AS SpecialtyDescription,
+
+                    -- Subspecialty
+                    ss.SUBSPECIALTY_NAME               AS SubspecialtyName,
+
+                    -- Last updated staff info
+                    stf.STAFF_ID                       AS LastUpdatedByUserCode,
+                    stf.STAFF_NAME                     AS LastUpdatedByUserName
+
+                FROM dbo.instance_template it
+                LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
+                LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
+                LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+                LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
+                LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+                ORDER BY it.INSTANCE_TEMPLATE_KEY;
+            ";
+
+            return await QueryAsync<TemplateDTO>(sql, new { Week = week });
+        }
 
         public async Task<Template?> GetById(int id)
         {
@@ -607,6 +715,42 @@ namespace MediHub.Infrastructure.Data.Repositories
 
         public async Task<int> Create(Template t)
         {
+            var conflicts = await QueryAsync<TemplateDTO>(
+                @"
+                SELECT 
+                    t.INSTANCE_TEMPLATE_KEY AS Id,
+                    t.INSTANCE_TEMPLATE_ASSET_KEY AS AssetId,
+                    t.INSTANCE_TEMPLATE_CYCLE_WEEK AS CycleWeek,
+                    t.INSTANCE_TEMPLATE_CYCLE_DAY AS CycleDay,
+                    t.INSTANCE_TEMPLATE_START_TIME AS StartTime,
+                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime
+                FROM dbo.fnCheckInstanceTemplateConflict(
+                    @AssetKey,
+                    @CycleWeek,
+                    @CycleDay,
+                    @StartTime,
+                    @EndTime,
+                    @IgnoreKey
+                ) t",
+                new {
+                    AssetKey = t.AssetId,
+                    CycleWeek = t.CycleWeek,
+                    CycleDay = t.CycleDay,
+                    StartTime = t.StartTime,
+                    EndTime = t.EndTime,
+                    IgnoreKey = (int?)null  // must be nullable for inserts
+                }
+            );
+
+            if (conflicts.Any())
+            {
+                _logger.LogInformation("Conflicts count: {Count}", conflicts.Count());
+
+                List<int> ids = conflicts.Select(c => c.Id).ToList();
+                // 2️⃣ Throw a controlled exception
+                throw new ConflictException(ids);
+            }
+
             const string sql = @"
                 INSERT INTO dbo.instance_template
                 (
@@ -636,6 +780,134 @@ namespace MediHub.Infrastructure.Data.Repositories
             ";
 
             return await ExecuteScalarAsync<int>(sql, t);
+        }
+
+
+        // public async Task<string?> CheckForInstanceClashes(
+        //     int? instanceId,      // null for create
+        //     int assetId,
+        //     DateTime start,
+        //     DateTime end,
+        //     List<int> staffs)
+        // {
+        //     /* ---------------- INSTANCE CLASH ---------------- */
+        //     const string clashCheckSql = @"
+        //         SELECT i.Id
+        //         FROM dbo.instance i
+        //         WHERE i.asset_id = @AssetId
+        //         AND (@InstanceId IS NULL OR i.id <> @InstanceId)
+        //         AND i.start_datetime < @EndDateTime
+        //         AND i.end_datetime > @StartDateTime
+        //     ";
+
+        //     var existingInstances = await QueryAsync<int>(clashCheckSql, new
+        //     {
+        //         AssetId = assetId,
+        //         InstanceId = instanceId,
+        //         StartDateTime = start,
+        //         EndDateTime = end
+        //     });
+
+        //     /* ---------------- STAFF CLASH ---------------- */
+        //     const string staffClashSql = @"
+        //         SELECT s.staff_id
+        //         FROM dbo.instance_staff s
+        //         INNER JOIN dbo.instance i ON s.instance_id = i.id
+        //         WHERE s.staff_id IN @StaffIds
+        //         AND (@InstanceId IS NULL OR i.id <> @InstanceId)
+        //         AND i.start_datetime < @EndDateTime
+        //         AND i.end_datetime > @StartDateTime
+        //     ";
+
+        //     var staffClashes = await QueryAsync<int>(staffClashSql, new
+        //     {
+        //         StaffIds = staffs,
+        //         InstanceId = instanceId,
+        //         StartDateTime = start,
+        //         EndDateTime = end
+        //     });
+
+        //     if (!existingInstances.Any() && !staffClashes.Any())
+        //         return null;
+
+        //     var lines = new List<string> { "Your changes conflict with existing data." };
+
+        //     if (existingInstances.Any())
+        //         lines.Add("Conflicting instance IDs: " + string.Join(", ", existingInstances));
+
+        //     if (staffClashes.Any())
+        //     {
+        //         const string staffQuery = @"
+        //             SELECT first_name AS FirstName, last_name AS LastName
+        //             FROM dbo.Staff
+        //             WHERE Id IN @StaffIds
+        //         ";
+
+        //         var staffNames = (await QueryAsync<(string FirstName, string LastName)>(
+        //             staffQuery,
+        //             new { StaffIds = staffClashes.ToArray() }))
+        //             .Select(s => $"{s.FirstName} {s.LastName}");
+
+        //         lines.Add("Conflicting staff: " + string.Join(", ", staffNames));
+        //     }
+
+        //     return string.Join(Environment.NewLine, lines);
+        // }
+
+        public async Task<List<int>> GetInstanceClashes(
+            int assetId,
+            DateTime startDateTime,
+            DateTime endDateTime)
+        {
+            const string sql = @"
+                SELECT i.INSTANCE_KEY
+                FROM dbo.instance i
+                WHERE i.INSTANCE_ASSET_KEY = @AssetId
+                AND i.INSTANCE_START_DATETIME < @EndDateTime
+                AND i.INSTANCE_END_DATETIME   > @StartDateTime
+            ";
+
+            var clashes = await QueryAsync<int>(sql, new
+            {
+                AssetId = assetId,
+                StartDateTime = startDateTime,
+                EndDateTime = endDateTime
+            });
+
+            return clashes.ToList();
+        }
+
+
+        public async Task<List<int>> GetTemplateClashes(
+            int? templateId,
+            int assetId,
+            int week,
+            int dayOfWeek,
+            TimeSpan startTime,
+            TimeSpan endTime)
+        {
+            const string sql = @"
+                SELECT INSTANCE_TEMPLATE_KEY
+                FROM dbo.instance_template
+                WHERE INSTANCE_TEMPLATE_ASSET_KEY = @AssetId
+                AND INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+                AND INSTANCE_TEMPLATE_CYCLE_DAY = @DayOfWeek
+                AND (@TemplateId IS NULL OR INSTANCE_TEMPLATE_KEY <> @TemplateId)
+                AND INSTANCE_TEMPLATE_START_TIME < @EndTime
+                AND INSTANCE_TEMPLATE_END_TIME > @StartTime
+            ";
+
+            var clashes = await QueryAsync<int>(sql, new
+            {
+                TemplateId = templateId,
+                AssetId = assetId,
+                Week = week,
+                DayOfWeek = dayOfWeek,
+                StartTime = startTime,
+                EndTime = endTime
+            });
+
+            return clashes.ToList();
         }
 
     }

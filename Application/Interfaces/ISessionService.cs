@@ -6,7 +6,7 @@ namespace MediHub.Application.Interfaces
     public interface ISessionService
     {
         Task<int> Create(Session s);
-        Task<int> Delete(int id);
+        Task Delete(int id);
         Task<int> Update(Session s);
         Task<IEnumerable<Session>> GetAll();
 

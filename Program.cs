@@ -2,7 +2,6 @@ using System.Text.Json;
 using MediHub.Application.Interfaces;
 using MediHub.Application.Services;
 using MediHub.Infrastructure.Data;
-using MediHub.Infrastructure.Data.Helpers;
 using MediHub.Infrastructure.Data.Interfaces;
 using MediHub.Infrastructure.Data.Repositories;
 using Microsoft.Azure.Functions.Worker;
@@ -39,8 +38,6 @@ builder.UseMiddleware<AuthAndCorsMiddleware>();
 
 builder.Services.AddSingleton<SqlConnectionFactory>();
 
-builder.Services.AddScoped<SchedulingClash>();
-
 
 builder.Services.AddScoped<IEquipmentRepository, EquipmentRepository>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
@@ -51,8 +48,7 @@ builder.Services.AddScoped<IFacilityService, FacilityService>();
 builder.Services.AddScoped<IInstanceRepository, InstanceRepository>();
 builder.Services.AddScoped<IInstanceService, InstanceService>();
 
-builder.Services.AddScoped<IScheduleRepository, ScheduleRepository>();
-builder.Services.AddScoped<IScheduleService, ScheduleService>();
+// builder.Services.AddScoped<IScheduleService, ScheduleService>();
 
 builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();

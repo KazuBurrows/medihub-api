@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,23 +23,15 @@ public class SubspecialtyItem
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
             Route = "subspecialty/{id}")] HttpRequestData req,
-        string id,
+        int id,
         FunctionContext context)
     {
          var log = context.GetLogger("SubspecialtyItem");
-        
-        // Validate ID safely
-        if (!int.TryParse(id, out var subspecialtyId))
-        {
-            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid subspecialty id.");
-            return bad;
-        }
 
         // GET /subspecialty/{id}
         if (req.Method == "GET")
         {
-            var subspecialty = await _subspecialtyService.GetById(subspecialtyId);
+            var subspecialty = await _subspecialtyService.GetById(id);
 
             if (subspecialty == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -51,12 +44,15 @@ public class SubspecialtyItem
         // DELETE /subspecialty/{id}
         if (req.Method == "DELETE")
         {
-            var deleted = await _subspecialtyService.Delete(subspecialtyId);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            return req.CreateResponse(HttpStatusCode.NoContent);
+            try
+            {
+                await _subspecialtyService.Delete(id);
+                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
         // PUT /subspecialty/{id}
@@ -68,7 +64,7 @@ public class SubspecialtyItem
                 return errorResponse;
 
             // OPTIONAL: Validate body ID if it exists
-            if (data!.Id != 0 && data.Id != subspecialtyId)
+            if (data!.Id != 0 && data.Id != id)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                 await bad.WriteStringAsync(
@@ -78,7 +74,7 @@ public class SubspecialtyItem
             }
 
             // Force route ID to be authoritative
-            data.Id = subspecialtyId;
+            data.Id = id;
 
             var updated = await _subspecialtyService.Update(data);
 

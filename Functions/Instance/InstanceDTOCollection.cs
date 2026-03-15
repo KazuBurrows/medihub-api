@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.DTOs;
 using MediHub.Functions.Helpers;
 using MediHub.Infrastructure.Data.Utils;
@@ -34,7 +35,9 @@ public class InstanceDTOCollection
         if (req.Method == "GET")
         {
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            var instances = await _instanceService.GetAllDTO();
+            IEnumerable<InstanceDTO> instances;
+
+            instances = await _instanceService.GetAllDTO();
 
             // Log the first 10 instances
             var first10 = instances.Take(10);
@@ -52,36 +55,23 @@ public class InstanceDTOCollection
         // POST /template
         if (req.Method == "POST")
         {
-            log.LogInformation("POST /instance endpoint hit");
+            var (input, errorResponse) = await RequestValidator.ReadAndValidateAsync<InstanceDTO>(req);
+            if (errorResponse != null)
+                return errorResponse;
 
-            // Read raw body ONCE
-            var rawBody = await new StreamReader(req.Body).ReadToEndAsync();
-
-            log.LogInformation("Raw request body: {Body}", rawBody);
-
-            // Deserialize manually
-            var data = JsonSerializer.Deserialize<InstanceDTO>(
-                rawBody,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-            if (data == null)
+            try
             {
-                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-                await bad.WriteStringAsync("Invalid JSON");
-                return bad;
+                var instance = await _instanceService.CreateDTO(input);
+                return await ApiResponseFactory.Success<Domain.DTOs.InstanceDTO>(req, "Instance", instance, ActionType.Updated);
             }
-
-            log.LogInformation("InstanceDTO received: {@Instance}", data);
-
-            var created = await _instanceService.CreateDTO(data);
-
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-
-            return response;
+            catch (ConflictException ex)
+            {
+                return await ApiResponseFactory.Conflict(req, ex.Message, ex.ConflictingIds);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
 

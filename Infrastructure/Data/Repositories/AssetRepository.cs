@@ -1,3 +1,4 @@
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Domain.DTOs;
 using MediHub.Domain.Models;
 using MediHub.Infrastructure.Data.Interfaces;
@@ -12,18 +13,18 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<IEnumerable<Asset>> GetAll()
         {
             const string sql = @"
-        SELECT 
-            ASSET_KEY              AS Id,
-            ASSET_CODE             AS Code,
-            ASSET_DESCRIPTION      AS Description,
-            ASSET_TYPE_CODE        AS TypeCode,
-            ASSET_LOCATION         AS Location,
-            ASSET_FACILITY_KEY     AS FacilityId,
-            ASSET_DISTRICT_OF_SERVICE AS DistrictOfService,
-            ASSET_PRIMARY_SPECIALTY_KEY AS PrimarySpecialtyKey,
-            ASSET_PAEDIATRIC       AS Paediatric,
-            ASSET_DEDICATED_ACUTE  AS DedicatedAcute
-        FROM dbo.asset";
+                SELECT 
+                    ASSET_KEY              AS Id,
+                    ASSET_CODE             AS Code,
+                    ASSET_DESCRIPTION      AS Description,
+                    ASSET_TYPE_CODE        AS TypeCode,
+                    ASSET_LOCATION         AS Location,
+                    ASSET_FACILITY_KEY     AS FacilityId,
+                    ASSET_DISTRICT_OF_SERVICE AS DistrictOfService,
+                    ASSET_PRIMARY_SPECIALTY_KEY AS PrimarySpecialtyKey,
+                    ASSET_PAEDIATRIC       AS Paediatric,
+                    ASSET_DEDICATED_ACUTE  AS DedicatedAcute
+                FROM dbo.asset";
 
             return await QueryAsync<Asset>(sql);
         }
@@ -33,19 +34,19 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<Asset?> GetById(int id)
         {
             const string sql = @"
-        SELECT 
-            ASSET_KEY              AS Id,
-            ASSET_CODE             AS Code,
-            ASSET_DESCRIPTION      AS Description,
-            ASSET_TYPE_CODE        AS TypeCode,
-            ASSET_LOCATION         AS Location,
-            ASSET_FACILITY_KEY     AS FacilityId,
-            ASSET_DISTRICT_OF_SERVICE AS DistrictOfService,
-            ASSET_PRIMARY_SPECIALTY_KEY AS PrimarySpecialtyKey,
-            ASSET_PAEDIATRIC       AS Paediatric,
-            ASSET_DEDICATED_ACUTE  AS DedicatedAcute
-        FROM dbo.asset
-        WHERE ASSET_KEY = @Id";
+                SELECT 
+                    ASSET_KEY              AS Id,
+                    ASSET_CODE             AS Code,
+                    ASSET_DESCRIPTION      AS Description,
+                    ASSET_TYPE_CODE        AS TypeCode,
+                    ASSET_LOCATION         AS Location,
+                    ASSET_FACILITY_KEY     AS FacilityId,
+                    ASSET_DISTRICT_OF_SERVICE AS DistrictOfService,
+                    ASSET_PRIMARY_SPECIALTY_KEY AS PrimarySpecialtyKey,
+                    ASSET_PAEDIATRIC       AS Paediatric,
+                    ASSET_DEDICATED_ACUTE  AS DedicatedAcute
+                FROM dbo.asset
+                WHERE ASSET_KEY = @Id";
 
             return await QuerySingleOrDefaultAsync<Asset>(sql, new { Id = id });
         }
@@ -54,28 +55,27 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<int> Create(Asset t)
         {
             const string sql = @"
-            INSERT INTO dbo.asset (
-                ASSET_CODE,
-                ASSET_DESCRIPTION,
-                ASSET_TYPE_CODE,
-                ASSET_LOCATION,
-                ASSET_FACILITY_KEY,
-                ASSET_DISTRICT_OF_SERVICE,
-                ASSET_PRIMARY_SPECIALTY_KEY,
-                ASSET_PAEDIATRIC,
-                ASSET_DEDICATED_ACUTE
-            )
-            VALUES (
-                @Code,
-                @Description,
-                @TypeCode,
-                @Location,
-                @FacilityId,
-                @DistrictOfService,
-                @PrimarySpecialtyId,
-                @Paediatric,
-                @DedicatedAcute
-            )";
+                INSERT INTO dbo.asset (
+                    ASSET_CODE,
+                    ASSET_DESCRIPTION,
+                    ASSET_TYPE_CODE,
+                    ASSET_LOCATION,
+                    ASSET_FACILITY_KEY,
+                    ASSET_DISTRICT_OF_SERVICE,
+                    ASSET_PRIMARY_SPECIALTY_KEY,
+                    ASSET_PAEDIATRIC,
+                    ASSET_DEDICATED_ACUTE
+                )
+                VALUES (
+                    @Code,
+                    @Description,
+                    @TypeCode,
+                    @Location,
+                    @FacilityId,
+                    @DistrictOfService,
+                    @PrimarySpecialtyId,
+                    @Paediatric,
+                    @DedicatedAcute)";
 
             return await ExecuteAsync(sql, t);
         }
@@ -86,18 +86,18 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<int> Update(Asset t)
         {
             const string sql = @"
-            UPDATE dbo.asset
-            SET 
-                ASSET_CODE = @Code,
-                ASSET_DESCRIPTION = @Description,
-                ASSET_TYPE_CODE = @TypeCode,
-                ASSET_LOCATION = @Location,
-                ASSET_FACILITY_KEY = @FacilityId,
-                ASSET_DISTRICT_OF_SERVICE = @DistrictOfService,
-                ASSET_PRIMARY_SPECIALTY_KEY = @PrimarySpecialtyId,
-                ASSET_PAEDIATRIC = @Paediatric,
-                ASSET_DEDICATED_ACUTE = @DedicatedAcute
-            WHERE ASSET_KEY = @Id";
+                UPDATE dbo.asset
+                SET 
+                    ASSET_CODE = @Code,
+                    ASSET_DESCRIPTION = @Description,
+                    ASSET_TYPE_CODE = @TypeCode,
+                    ASSET_LOCATION = @Location,
+                    ASSET_FACILITY_KEY = @FacilityId,
+                    ASSET_DISTRICT_OF_SERVICE = @DistrictOfService,
+                    ASSET_PRIMARY_SPECIALTY_KEY = @PrimarySpecialtyId,
+                    ASSET_PAEDIATRIC = @Paediatric,
+                    ASSET_DEDICATED_ACUTE = @DedicatedAcute
+                WHERE ASSET_KEY = @Id";
 
             return await ExecuteAsync(sql, t);
         }
@@ -105,10 +105,15 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
 
-        public async Task<int> Delete(int id)
+        public async Task Delete(int id)
         {
             const string sql = "DELETE FROM dbo.asset WHERE ASSET_KEY = @Id";
-            return await ExecuteAsync(sql, new { Id = id });
+            
+            var rowsAffected = await ExecuteAsync(sql, new { Id = id });
+            if (rowsAffected == 0)
+            {
+                throw new NotFoundException($"No item found with ID {id}.");
+            }
         }
 
 

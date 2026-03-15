@@ -6,18 +6,19 @@ namespace MediHub.Infrastructure.Data.Interfaces
 {
     public interface IInstanceRepository
     {
-        Task<int> Create(Instance s);
-        Task<int> Delete(int id);
-        Task<int> Update(Instance s);
+        Task<Instance> Create(Instance s);
+        Task Delete(int id);
+        Task<Instance> Update(Instance s);
         Task<IEnumerable<Instance>> GetAll();
         Task<Instance> GetById(int id);
         Task<IEnumerable<InstanceDTO>> GetAllByStaffId(int staffId);
         Task<IEnumerable<InstanceDTO>> GetAllDTO();
+        Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate);
 
-        Task<int> CreateDTO(InstanceDTO i);
+        Task<InstanceDTO> CreateDTO(InstanceDTO i);
         Task<InstanceDTO> GetByIdDTO(int id);
         Task<InstanceDTO> UpdateDTO(InstanceDTO i);
-        Task<int> DeleteDTO(int id);
+        Task DeleteDTO(int id);
 
         Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date);
     }

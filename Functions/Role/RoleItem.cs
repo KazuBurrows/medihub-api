@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,23 +23,15 @@ public class RoleItem
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
             Route = "role/{id}")] HttpRequestData req,
-        string id,
+        int id,
         FunctionContext context)
     {
         var log = context.GetLogger("RoleItem");
         
-        // Validate ID safely
-        if (!int.TryParse(id, out var roleId))
-        {
-            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid role id.");
-            return bad;
-        }
-
         // GET /role/{id}
         if (req.Method == "GET")
         {
-            var role = await _roleService.GetById(roleId);
+            var role = await _roleService.GetById(id);
 
             if (role == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -51,12 +44,15 @@ public class RoleItem
         // DELETE /role/{id}
         if (req.Method == "DELETE")
         {
-            var deleted = await _roleService.Delete(roleId);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            return req.CreateResponse(HttpStatusCode.NoContent);
+            try
+            {
+                await _roleService.Delete(id);
+                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
         // PUT /role/{id}
@@ -68,7 +64,7 @@ public class RoleItem
                 return errorResponse;
 
             // OPTIONAL: Validate body ID if it exists
-            if (data!.Id != 0 && data.Id != roleId)
+            if (data!.Id != 0 && data.Id != id)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                 await bad.WriteStringAsync(
@@ -78,7 +74,7 @@ public class RoleItem
             }
 
             // Force route ID to be authoritative
-            data.Id = roleId;
+            data.Id = id;
 
             var updated = await _roleService.Update(data);
 

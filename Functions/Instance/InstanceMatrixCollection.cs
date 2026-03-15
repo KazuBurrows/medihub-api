@@ -21,7 +21,7 @@ public class InstanceMatrixCollection
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
-            "get", "post", "options",
+            "get", "options",
             Route = "instances/matrix/{view}/{date}")]
         HttpRequestData req,
         string view,

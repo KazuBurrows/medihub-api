@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using MediHub.Application.Interfaces;
+using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,21 +23,14 @@ public class SpecialtyItem
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
             Route = "specialty/{id}")] HttpRequestData req,
-        string id,
+        int id,
         FunctionContext context)
     {
          var log = context.GetLogger("SpecialtyItem");
-            
-        if (!int.TryParse(id, out var specialtyId))
-        {
-            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid specialty id.");
-            return bad;
-        }
 
         if (req.Method == "GET")
         {
-            var specialty = await _specialtyService.GetById(specialtyId);
+            var specialty = await _specialtyService.GetById(id);
 
             if (specialty == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -48,12 +42,15 @@ public class SpecialtyItem
 
         if (req.Method == "DELETE")
         {
-            var deleted = await _specialtyService.Delete(specialtyId);
-
-            if (deleted == 0)
-                return req.CreateResponse(HttpStatusCode.NotFound);
-
-            return req.CreateResponse(HttpStatusCode.NoContent);
+            try
+            {
+                await _specialtyService.Delete(id);
+                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+            }
+            catch (NotFoundException ex)
+            {
+                return await ApiResponseFactory.NotFound(req, ex.Message);
+            }
         }
 
         if (req.Method == "PUT")
@@ -64,7 +61,7 @@ public class SpecialtyItem
                 return errorResponse;
 
             // OPTIONAL: Validate body ID if it exists
-            if (data!.Id != 0 && data.Id != specialtyId)
+            if (data!.Id != 0 && data.Id != id)
             {
                 var bad = req.CreateResponse(HttpStatusCode.BadRequest);
                 await bad.WriteStringAsync(
@@ -74,7 +71,7 @@ public class SpecialtyItem
             }
 
             // Force route ID to be authoritative
-            data.Id = specialtyId;
+            data.Id = id;
 
             var updated = await _specialtyService.Update(data);
 

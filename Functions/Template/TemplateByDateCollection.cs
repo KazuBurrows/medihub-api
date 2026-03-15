@@ -23,7 +23,7 @@ public class TemplateByDateCollection
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "post", "options",
-                    Route = "templates/{date}")] HttpRequestData req,
+                    Route = "templates/apply/{date}")] HttpRequestData req,
         string date,
         FunctionContext context)
     {
@@ -35,7 +35,7 @@ public class TemplateByDateCollection
         if (req.Method == "POST")
         {
             DateTime dateTime = DateTime.Parse(date);
-DateOnly dateOnly = DateOnly.FromDateTime(dateTime);
+            DateOnly dateOnly = DateOnly.FromDateTime(dateTime);
             var res = await _templateService.ApplyTemplate(dateOnly);
 
             var response = req.CreateResponse(HttpStatusCode.OK);
