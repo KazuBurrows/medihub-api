@@ -25,11 +25,15 @@ namespace MediHub.Domain.Models
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
+        [Column("SESSION_SURGEON_TYPE")]
+        public string? SurgeonType { get; set; }
+
         [Column("SESSION_SPECIALTY_KEY")]
         public int? SpecialtyId { get; set; }
 
         [Column("SESSION_SUBSPECIALTY_KEY")]
         public int? SubspecialtyId { get; set; }
+
     }
 
 }

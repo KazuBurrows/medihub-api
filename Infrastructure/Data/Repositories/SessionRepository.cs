@@ -19,6 +19,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SESSION_IS_PAEDIATRIC AS IsPediatric,
                     SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
                     SESSION_SURGEON_KEY AS SurgeonId,
+                    SESSION_SURGEON_TYPE AS SurgeonType,
                     SESSION_SPECIALTY_KEY AS SpecialtyId,
                     SESSION_SUBSPECIALTY_KEY AS SubspecialtyId
                 FROM dbo.session
@@ -39,6 +40,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
                     st.STAFF_NAME AS SurgeonName,
+                    s.SESSION_SURGEON_TYPE AS SurgeonType,
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
                     sp.SPECIALTY_CODE AS SpecialtyCode,
                     sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
@@ -67,6 +69,7 @@ namespace MediHub.Infrastructure.Data.Repositories
             SESSION_IS_PAEDIATRIC AS IsPediatric,
             SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
             SESSION_SURGEON_KEY AS SurgeonId,
+            SESSION_SURGEON_TYPE AS SurgeonType,
             SESSION_SPECIALTY_KEY AS SpecialtyId,
             SESSION_SUBSPECIALTY_KEY AS SubspecialtyId
         FROM dbo.session
@@ -86,6 +89,7 @@ namespace MediHub.Infrastructure.Data.Repositories
             s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
             s.SESSION_SURGEON_KEY AS SurgeonId,
             st.STAFF_NAME AS SurgeonName,
+            s.SESSION_SURGEON_TYPE AS SurgeonType,
             s.SESSION_SPECIALTY_KEY AS SpecialtyId,
             sp.SPECIALTY_CODE AS SpecialtyCode,
             sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
@@ -114,6 +118,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SESSION_IS_PAEDIATRIC,
                     SESSION_ANAESTHETIC_TYPE,
                     SESSION_SURGEON_KEY,
+                    SESSION_SURGEON_TYPE,
                     SESSION_SPECIALTY_KEY,
                     SESSION_SUBSPECIALTY_KEY
                 )
@@ -124,6 +129,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @IsPediatric,
                     @AnaestheticType,
                     @SurgeonId,
+                    @SurgeonType,
                     @SpecialtyId,
                     @SubspecialtyId
                 )";
@@ -143,6 +149,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SESSION_IS_PAEDIATRIC = @IsPediatric,
                     SESSION_ANAESTHETIC_TYPE = @AnaestheticType,
                     SESSION_SURGEON_KEY = @SurgeonId,
+                    SESSION_SURGEON_TYPE = @SurgeonType,
                     SESSION_SPECIALTY_KEY = @SpecialtyId,
                     SESSION_SUBSPECIALTY_KEY = @SubspecialtyId
                 WHERE SESSION_KEY = @Id";

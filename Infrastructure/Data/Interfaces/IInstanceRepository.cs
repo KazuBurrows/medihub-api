@@ -21,5 +21,6 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task DeleteDTO(int id);
 
         Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date);
+        Task<MatrixLayout> GetMatrixLayout();
     }
 }

@@ -25,6 +25,9 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
+        [Column("SESSION_SURGEON_TYPE")]
+        public string? SurgeonType { get; set; }
+
         public string? SurgeonName { get; set; }
 
         [Column("SESSION_SPECIALTY_KEY")]

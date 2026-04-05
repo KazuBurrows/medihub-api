@@ -72,6 +72,9 @@ namespace MediHub.Domain.Matrix
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
+        [Column("SESSION_SURGEON_TYPE")]
+        public string? SurgeonType { get; set; }
+
         [Column("STAFF_NAME")]
         public string? SurgeonName { get; set; }
 

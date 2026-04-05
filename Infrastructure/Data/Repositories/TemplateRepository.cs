@@ -401,7 +401,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
 
 
-        public async Task<string> ApplyTemplate(DateOnly date)
+        public async Task<string> ApplyTemplate(DateOnly date, int cycleWeek)
         {
             _logger.LogInformation("=== ApplyTemplate STARTED === BaseDate: {Date}", date);
 
@@ -413,10 +413,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
             try
             {
-                for (int week = 1; week <= 4; week++)
-                {
-                    var weekStartDate = date.AddDays((week - 1) * 7);
-                    _logger.LogInformation("Processing Week {Week} | WeekStartDate: {WeekStartDate}", week, weekStartDate);
+
+                    var weekStartDate = date.AddDays((cycleWeek - 1) * 7);
+                    _logger.LogInformation("Processing Week {Week} | WeekStartDate: {WeekStartDate}", cycleWeek, weekStartDate);
 
                     var templates = (await QueryAsync<Template>(@"
                         SELECT 
@@ -427,16 +426,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                             INSTANCE_TEMPLATE_CYCLE_DAY   AS CycleDay,
                             INSTANCE_TEMPLATE_START_TIME  AS StartTime,
                             INSTANCE_TEMPLATE_END_TIME    AS EndTime,
-                            INSTANCE_TEMPLATE_IS_OPEN     AS IsOpen,
+                            INSTANCE_TEMPLATE_IS_OPEN     AS IsOpen
                         FROM dbo.instance_template
-                        WHERE INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+                        WHERE INSTANCE_TEMPLATE_CYCLE_WEEK = @CycleWeek
                         AND INSTANCE_TEMPLATE_IS_OPEN = 1
-                    ", new { Week = week })).ToList();
+                    ", new { CycleWeek = cycleWeek })).ToList();
 
                     if (!templates.Any())
                     {
-                        _logger.LogWarning("No active templates found for week {Week}", week);
-                        continue;
+                        _logger.LogWarning("No active templates found for week {Week}", cycleWeek);
                     }
 
                     foreach (var t in templates)
@@ -468,7 +466,6 @@ namespace MediHub.Infrastructure.Data.Repositories
                             IsOpen = t.IsOpen
                         });
                     }
-                }
 
                 return $"ApplyTemplate completed successfully.";
             }

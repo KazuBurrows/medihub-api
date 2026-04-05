@@ -80,6 +80,11 @@ namespace MediHub.Application.Services
         {
             return await _repository.GetAllWeekMatrix(date);
         }
+
+        public async Task<MatrixLayout> GetMatrixLayout()
+        {
+            return await _repository.GetMatrixLayout();
+        }
     }
 }
 

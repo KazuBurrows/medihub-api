@@ -19,7 +19,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_SESSION_KEY     AS SessionId,
                     INSTANCE_START_DATETIME  AS StartDatetime,
                     INSTANCE_END_DATETIME    AS EndDatetime,
-                    INSTANCE_IS_OPEN         AS IsOpen
+                    INSTANCE_IS_OPEN         AS IsOpen,
+                    INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId
                 FROM dbo.instance";
 
             return await QueryAsync<Instance>(sql);
@@ -28,92 +29,126 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<IEnumerable<InstanceDTO>> GetAllByStaffId(int staffId)
         {
             const string sql = @"
+                SELECT
+                    -- Instance
+                    i.INSTANCE_KEY AS Id,
+                    i.INSTANCE_SESSION_KEY AS SessionId,
+                    i.INSTANCE_ASSET_KEY AS AssetId,
+                    i.INSTANCE_START_DATETIME AS StartDatetime,
+                    i.INSTANCE_END_DATETIME AS EndDatetime,
+                    i.INSTANCE_IS_OPEN AS IsOpen,
+                    i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                    i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
 
-            SELECT
-                -- Instance
-                i.INSTANCE_KEY AS Id,
-                i.INSTANCE_SESSION_KEY AS SessionId,
-                i.INSTANCE_ASSET_KEY AS AssetId,
-                i.INSTANCE_START_DATETIME AS StartDatetime,
-                i.INSTANCE_END_DATETIME AS EndDatetime,
-                i.INSTANCE_IS_OPEN AS IsOpen,
-                i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
-                i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    upd.STAFF_NAME AS LastUpdatedByUserName,
 
-                upd.STAFF_NAME AS LastUpdatedByUserName,
+                    -- Session
+                    s.SESSION_TITLE AS SessionTitle,
+                    s.SESSION_IS_ACUTE AS SessionIsAcute,
+                    s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
+                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_SURGEON_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    surgeon.STAFF_NAME AS SurgeonName,
 
-                -- Session
-                s.SESSION_TITLE AS SessionTitle,
-                s.SESSION_IS_ACUTE AS SessionIsAcute,
-                s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
-                s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                s.SESSION_SURGEON_KEY AS SurgeonId,
-                surgeon.STAFF_NAME AS SurgeonName,
+                    s.SESSION_SPECIALTY_KEY AS SpecialtyId,
+                    sp.SPECIALTY_CODE AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
 
-                s.SESSION_SPECIALTY_KEY AS SpecialtyId,
-                sp.SPECIALTY_CODE AS SpecialtyCode,
-                sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
+                    s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
+                    subs.SUBSPECIALTY_NAME AS SubspecialtyName,
 
-                s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
-                subs.SUBSPECIALTY_NAME AS SubspecialtyName,
+                    -- Session Override
+                    i.INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
+
+                    so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
+                    so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+
+                    so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
+                    so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
+
+                    so.SESSION_OVERRIDE_SUBSPECIALTY_KEY AS SessionOverrideSubspecialtyId,
+                    so_subs.SUBSPECIALTY_NAME AS SessionOverrideSubspecialtyName,
+
+                    so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
+                    so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
+
+                    -- Asset
+                    a.ASSET_CODE AS AssetCode,
+                    a.ASSET_LOCATION AS AssetLocation,
+                    a.ASSET_DESCRIPTION AS AssetDescription,
+                    
+                    a.ASSET_FACILITY_KEY AS FacilityId,
+                    f.FACILITY_NAME AS FacilityName,
+
+                    -- Staff
+                    st.STAFF_KEY AS StaffId,
+                    st.STAFF_ID,
+                    st.STAFF_NAME,
+                    st.STAFF_EMAIL,
+
+                    st.STAFF_SPECIALTY_KEY AS SpecialtyId,
+                    sps.SPECIALTY_CODE AS StaffSpecialtyCode,
+                    sps.SPECIALTY_DESCRIPTION AS StaffSpecialtyDescription,
+
+                    r.ROLE_KEY AS RoleId,
+                    r.ROLE_NAME AS RoleName
+
+                FROM dbo.instance i
+
+                LEFT JOIN dbo.session s
+                    ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
+
+                -- Session override joins
+                LEFT JOIN dbo.session_override so
+                    ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
+
+                LEFT JOIN dbo.staff so_surgeon
+                    ON so_surgeon.STAFF_KEY = so.SESSION_OVERRIDE_SURGEON_KEY
+
+                LEFT JOIN dbo.specialty so_sp
+                    ON so_sp.SPECIALTY_KEY = so.SESSION_OVERRIDE_SPECIALTY_KEY
+
+                LEFT JOIN dbo.subspecialty so_subs
+                    ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
+
+                -- Session joins
+                LEFT JOIN dbo.staff surgeon
+                    ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
+
+                LEFT JOIN dbo.specialty sp
+                    ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
+
+                LEFT JOIN dbo.subspecialty subs
+                    ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
 
                 -- Asset
-                a.ASSET_CODE AS AssetCode,
-                a.ASSET_LOCATION AS AssetLocation,
-                a.ASSET_DESCRIPTION AS AssetDescription,
-                
-                a.ASSET_FACILITY_KEY AS FacilityId,
-                f.FACILITY_NAME AS FacilityName,
+                LEFT JOIN dbo.asset a
+                    ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
 
-                -- Staff
-                st.STAFF_KEY AS StaffId,
-                st.STAFF_ID,
-                st.STAFF_NAME,
-                st.STAFF_EMAIL,
+                LEFT JOIN dbo.facility f
+                    ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
 
-                st.STAFF_SPECIALTY_KEY AS SpecialtyId,
-                sps.SPECIALTY_CODE,
-                sps.SPECIALTY_DESCRIPTION,
+                -- Updated by
+                LEFT JOIN dbo.staff upd
+                    ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
 
-                r.ROLE_KEY AS RoleId,
-                r.ROLE_NAME AS RoleName
+                -- Staff assignments
+                LEFT JOIN dbo.instance_staff ist
+                    ON ist.INSTANCE_KEY = i.INSTANCE_KEY
 
-            FROM dbo.instance i
+                LEFT JOIN dbo.staff st
+                    ON st.STAFF_KEY = ist.STAFF_KEY
 
-            LEFT JOIN dbo.session s
-                ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
+                LEFT JOIN dbo.specialty sps
+                    ON sps.SPECIALTY_KEY = st.STAFF_SPECIALTY_KEY
 
-            LEFT JOIN dbo.staff surgeon
-                ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
+                LEFT JOIN dbo.role r
+                    ON r.ROLE_KEY = ist.ROLE_KEY
 
-            LEFT JOIN dbo.specialty sp
-                ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
-
-            LEFT JOIN dbo.subspecialty subs
-                ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
-
-            LEFT JOIN dbo.asset a
-                ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
-
-            LEFT JOIN dbo.facility f
-                ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
-
-            LEFT JOIN dbo.staff upd
-                ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
-
-            LEFT JOIN dbo.instance_staff ist
-                ON ist.INSTANCE_KEY = i.INSTANCE_KEY
-
-            LEFT JOIN dbo.staff st
-                ON st.STAFF_KEY = ist.STAFF_KEY
-
-            LEFT JOIN dbo.specialty sps
-                ON sps.SPECIALTY_KEY = st.STAFF_SPECIALTY_KEY
-
-            LEFT JOIN dbo.role r
-                ON r.ROLE_KEY = ist.ROLE_KEY
-
-            WHERE ist.STAFF_KEY = @StaffId
+                WHERE ist.STAFF_KEY = @StaffId
             ";
 
             var lookup = new Dictionary<int, InstanceDTO>();
@@ -152,7 +187,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_SESSION_KEY     AS SessionId,
                     INSTANCE_START_DATETIME  AS StartDatetime,
                     INSTANCE_END_DATETIME    AS EndDatetime,
-                    INSTANCE_IS_OPEN         AS IsOpen
+                    INSTANCE_IS_OPEN         AS IsOpen,
+                    INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId
                 FROM dbo.instance
                 WHERE INSTANCE_KEY = @Id";
 
@@ -174,7 +210,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_END_DATETIME,
                     INSTANCE_IS_OPEN,
                     INSTANCE_LAST_UPDATED_DATETIME,
-                    INSTANCE_LAST_UPDATED_USER_KEY
+                    INSTANCE_LAST_UPDATED_USER_KEY,
                 FROM dbo.fnCheckInstanceConflict
                 (
                     @AssetKey,
@@ -296,93 +332,123 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<IEnumerable<InstanceDTO>> GetAllDTO()
         {
             const string sql = @"
+                SELECT
 
-            SELECT
+                    -- Instance
+                    i.INSTANCE_KEY AS Id,
+                    i.INSTANCE_SESSION_KEY AS SessionId,
+                    i.INSTANCE_ASSET_KEY AS AssetId,
+                    i.INSTANCE_START_DATETIME AS StartDatetime,
+                    i.INSTANCE_END_DATETIME AS EndDatetime,
+                    i.INSTANCE_IS_OPEN AS IsOpen,
+                    i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
+                    i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
 
-                -- Instance
-                i.INSTANCE_KEY AS Id,
-                i.INSTANCE_SESSION_KEY AS SessionId,
-                i.INSTANCE_ASSET_KEY AS AssetId,
-                i.INSTANCE_START_DATETIME AS StartDatetime,
-                i.INSTANCE_END_DATETIME AS EndDatetime,
-                i.INSTANCE_IS_OPEN AS IsOpen,
-                i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
-                i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    upd.STAFF_NAME AS LastUpdatedByUserName,
 
-                upd.STAFF_NAME AS LastUpdatedByUserName,
+                    -- Session
+                    s.SESSION_TITLE AS SessionTitle,
+                    s.SESSION_IS_ACUTE AS SessionIsAcute,
+                    s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
+                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_SURGEON_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    surgeon.STAFF_NAME AS SurgeonName,
 
-                -- Session
-                s.SESSION_TITLE AS SessionTitle,
-                s.SESSION_IS_ACUTE AS SessionIsAcute,
-                s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
-                s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
-                s.SESSION_SURGEON_KEY AS SurgeonId,
-                surgeon.STAFF_NAME AS SurgeonName,
+                    s.SESSION_SPECIALTY_KEY AS SpecialtyId,
+                    sp.SPECIALTY_CODE AS SpecialtyCode,
+                    sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
 
-                s.SESSION_SPECIALTY_KEY AS SpecialtyId,
-                sp.SPECIALTY_CODE AS SpecialtyCode,
-                sp.SPECIALTY_DESCRIPTION AS SpecialtyDescription,
+                    s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
+                    subs.SUBSPECIALTY_NAME AS SubspecialtyName,
 
-                s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
-                subs.SUBSPECIALTY_NAME AS SubspecialtyName,
+                    -- Session Override
+                    i.INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
 
-                -- Asset
-                a.ASSET_CODE AS AssetCode,
-                a.ASSET_LOCATION AS AssetLocation,
-                a.ASSET_DESCRIPTION AS AssetDescription,
-                
-                a.ASSET_FACILITY_KEY AS FacilityId,
-                f.FACILITY_NAME AS FacilityName,
+                    so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
+                    so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
 
-                -- Staff
-                st.STAFF_KEY AS StaffId,
-                st.STAFF_ID,
-                st.STAFF_NAME,
-                st.STAFF_EMAIL,
+                    so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
+                    so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
 
-                st.STAFF_SPECIALTY_KEY AS SpecialtyId,
-                sps.SPECIALTY_CODE,
-                sps.SPECIALTY_DESCRIPTION,
+                    so.SESSION_OVERRIDE_SUBSPECIALTY_KEY AS SessionOverrideSubspecialtyId,
+                    so_subs.SUBSPECIALTY_NAME AS SessionOverrideSubspecialtyName,
 
-                r.ROLE_KEY AS RoleId,
-                r.ROLE_NAME AS RoleName
+                    so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
+                    so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
 
-            FROM dbo.instance i
+                    -- Asset
+                    a.ASSET_CODE AS AssetCode,
+                    a.ASSET_LOCATION AS AssetLocation,
+                    a.ASSET_DESCRIPTION AS AssetDescription,
+                    
+                    a.ASSET_FACILITY_KEY AS FacilityId,
+                    f.FACILITY_NAME AS FacilityName,
 
-            LEFT JOIN dbo.session s
-                ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
+                    -- Staff
+                    st.STAFF_KEY AS StaffId,
+                    st.STAFF_ID,
+                    st.STAFF_NAME,
+                    st.STAFF_EMAIL,
 
-            LEFT JOIN dbo.staff surgeon
-                ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
+                    st.STAFF_SPECIALTY_KEY AS SpecialtyId,
+                    sps.SPECIALTY_CODE,
+                    sps.SPECIALTY_DESCRIPTION,
 
-            LEFT JOIN dbo.specialty sp
-                ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
+                    r.ROLE_KEY AS RoleId,
+                    r.ROLE_NAME AS RoleName
 
-            LEFT JOIN dbo.subspecialty subs
-                ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
+                FROM dbo.instance i
 
-            LEFT JOIN dbo.asset a
-                ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
+                LEFT JOIN dbo.session s
+                    ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
-            LEFT JOIN dbo.facility f
-                ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
+                -- Join session override
+                LEFT JOIN dbo.session_override so
+                    ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
 
-            LEFT JOIN dbo.staff upd
-                ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
+                LEFT JOIN dbo.staff so_surgeon
+                    ON so_surgeon.STAFF_KEY = so.SESSION_OVERRIDE_SURGEON_KEY
 
-            LEFT JOIN dbo.instance_staff ist
-                ON ist.INSTANCE_KEY = i.INSTANCE_KEY
+                LEFT JOIN dbo.specialty so_sp
+                    ON so_sp.SPECIALTY_KEY = so.SESSION_OVERRIDE_SPECIALTY_KEY
 
-            LEFT JOIN dbo.staff st
-                ON st.STAFF_KEY = ist.STAFF_KEY
+                LEFT JOIN dbo.subspecialty so_subs
+                    ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
 
-            LEFT JOIN dbo.specialty sps
-                ON sps.SPECIALTY_KEY = st.STAFF_SPECIALTY_KEY
+                LEFT JOIN dbo.staff surgeon
+                    ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
 
-            LEFT JOIN dbo.role r
-                ON r.ROLE_KEY = ist.ROLE_KEY
+                LEFT JOIN dbo.specialty sp
+                    ON sp.SPECIALTY_KEY = s.SESSION_SPECIALTY_KEY
+
+                LEFT JOIN dbo.subspecialty subs
+                    ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
+
+                LEFT JOIN dbo.asset a
+                    ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
+
+                LEFT JOIN dbo.facility f
+                    ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
+
+                LEFT JOIN dbo.staff upd
+                    ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
+
+                LEFT JOIN dbo.instance_staff ist
+                    ON ist.INSTANCE_KEY = i.INSTANCE_KEY
+
+                LEFT JOIN dbo.staff st
+                    ON st.STAFF_KEY = ist.STAFF_KEY
+
+                LEFT JOIN dbo.specialty sps
+                    ON sps.SPECIALTY_KEY = st.STAFF_SPECIALTY_KEY
+
+                LEFT JOIN dbo.role r
+                    ON r.ROLE_KEY = ist.ROLE_KEY
             ";
-
+            
             var lookup = new Dictionary<int, InstanceDTO>();
 
             await QueryAsync<InstanceDTO, StaffDTO, InstanceDTO>(
@@ -412,7 +478,6 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate)
         {
             const string sql = @"
-
                 SELECT
 
                     -- Instance
@@ -433,6 +498,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
                     s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_TYPE AS SurgeonType,
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -441,6 +507,23 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
                     subs.SUBSPECIALTY_NAME AS SubspecialtyName,
+
+                    -- Session Override
+                    i.INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
+
+                    so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
+                    so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+
+                    so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
+                    so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
+
+                    so.SESSION_OVERRIDE_SUBSPECIALTY_KEY AS SessionOverrideSubspecialtyId,
+                    so_subs.SUBSPECIALTY_NAME AS SessionOverrideSubspecialtyName,
+
+                    so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
+                    so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
 
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
@@ -457,8 +540,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     st.STAFF_EMAIL,
 
                     st.STAFF_SPECIALTY_KEY AS SpecialtyId,
-                    sps.SPECIALTY_CODE,
-                    sps.SPECIALTY_DESCRIPTION,
+                    sps.SPECIALTY_CODE AS StaffSpecialtyCode,
+                    sps.SPECIALTY_DESCRIPTION AS StaffSpecialtyDescription,
 
                     r.ROLE_KEY AS RoleId,
                     r.ROLE_NAME AS RoleName
@@ -468,6 +551,20 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.session s
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
+                -- Session override joins
+                LEFT JOIN dbo.session_override so
+                    ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
+
+                LEFT JOIN dbo.staff so_surgeon
+                    ON so_surgeon.STAFF_KEY = so.SESSION_OVERRIDE_SURGEON_KEY
+
+                LEFT JOIN dbo.specialty so_sp
+                    ON so_sp.SPECIALTY_KEY = so.SESSION_OVERRIDE_SPECIALTY_KEY
+
+                LEFT JOIN dbo.subspecialty so_subs
+                    ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
+
+                -- Session joins
                 LEFT JOIN dbo.staff surgeon
                     ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
 
@@ -477,15 +574,18 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.subspecialty subs
                     ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
 
+                -- Asset
                 LEFT JOIN dbo.asset a
                     ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
 
                 LEFT JOIN dbo.facility f
                     ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
 
+                -- Updated by
                 LEFT JOIN dbo.staff upd
                     ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
 
+                -- Staff assignments
                 LEFT JOIN dbo.instance_staff ist
                     ON ist.INSTANCE_KEY = i.INSTANCE_KEY
 
@@ -638,7 +738,6 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<InstanceDTO> GetByIdDTO(int id)
         {
             const string sql = @"
-
                 SELECT
 
                     -- Instance
@@ -659,6 +758,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
                     s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_TYPE AS SurgeonType,
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -667,6 +767,23 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     s.SESSION_SUBSPECIALTY_KEY AS SubspecialtyId,
                     subs.SUBSPECIALTY_NAME AS SubspecialtyName,
+
+                    -- Session Override
+                    i.INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
+
+                    so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
+                    so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+
+                    so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
+                    so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
+
+                    so.SESSION_OVERRIDE_SUBSPECIALTY_KEY AS SessionOverrideSubspecialtyId,
+                    so_subs.SUBSPECIALTY_NAME AS SessionOverrideSubspecialtyName,
+
+                    so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
+                    so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
 
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
@@ -683,8 +800,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     st.STAFF_EMAIL,
 
                     st.STAFF_SPECIALTY_KEY AS SpecialtyId,
-                    sps.SPECIALTY_CODE,
-                    sps.SPECIALTY_DESCRIPTION,
+                    sps.SPECIALTY_CODE AS StaffSpecialtyCode,
+                    sps.SPECIALTY_DESCRIPTION AS StaffSpecialtyDescription,
 
                     r.ROLE_KEY AS RoleId,
                     r.ROLE_NAME AS RoleName
@@ -694,6 +811,20 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.session s
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
+                -- Session override joins
+                LEFT JOIN dbo.session_override so
+                    ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
+
+                LEFT JOIN dbo.staff so_surgeon
+                    ON so_surgeon.STAFF_KEY = so.SESSION_OVERRIDE_SURGEON_KEY
+
+                LEFT JOIN dbo.specialty so_sp
+                    ON so_sp.SPECIALTY_KEY = so.SESSION_OVERRIDE_SPECIALTY_KEY
+
+                LEFT JOIN dbo.subspecialty so_subs
+                    ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
+
+                -- Session joins
                 LEFT JOIN dbo.staff surgeon
                     ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
 
@@ -703,15 +834,18 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.subspecialty subs
                     ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
 
+                -- Asset
                 LEFT JOIN dbo.asset a
                     ON a.ASSET_KEY = i.INSTANCE_ASSET_KEY
 
                 LEFT JOIN dbo.facility f
                     ON f.FACILITY_KEY = a.ASSET_FACILITY_KEY
 
+                -- Updated by
                 LEFT JOIN dbo.staff upd
                     ON upd.STAFF_KEY = i.INSTANCE_LAST_UPDATED_USER_KEY
 
+                -- Staff assignments
                 LEFT JOIN dbo.instance_staff ist
                     ON ist.INSTANCE_KEY = i.INSTANCE_KEY
 
@@ -895,6 +1029,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_IS_PAEDIATRIC AS IsPediatric,
                     s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
+                    s.SESSION_SURGEON_TYPE AS SurgeonType,
                     st.STAFF_NAME AS SurgeonName,
 
                     i.INSTANCE_START_DATETIME AS StartDateTime,
@@ -1004,6 +1139,81 @@ namespace MediHub.Infrastructure.Data.Repositories
             );
 
             return lookup.Values.ToArray();
+        }
+
+        public async Task<MatrixLayout> GetMatrixLayout()
+        {
+            // 1️⃣ Fetch all unique locations
+            const string sqlLocations = @"
+                SELECT DISTINCT ASSET_LOCATION
+                FROM asset
+                ORDER BY ASSET_LOCATION
+            ";
+
+            var locations = (await QueryAsync<string>(sqlLocations)).ToList();
+
+            var groups = new List<MatrixNode>();
+
+            // 2️⃣ For each location, fetch its assets
+            const string sqlAssets = @"
+                SELECT 
+                    a.ASSET_KEY AS Id,
+                    a.ASSET_CODE AS Code,
+                    a.ASSET_DESCRIPTION AS Description,
+                    a.ASSET_TYPE_CODE AS TypeCode,
+                    a.ASSET_LOCATION AS Location,
+                    a.ASSET_FACILITY_KEY AS FacilityId,
+                    a.ASSET_DISTRICT_OF_SERVICE AS DistrictOfService,
+                    a.ASSET_PRIMARY_SPECIALTY_KEY AS PrimarySpecialtyId,
+                    f.FACILITY_KEY AS FacilityId, -- optional duplicate if you want facility info
+                    f.FACILITY_CODE AS FacilityCode,
+                    f.FACILITY_NAME AS FacilityName,
+                    f.FACILITY_TYPE_CODE AS FacilityTypeCode,
+                    f.FACILITY_TYPE_DESCRIPTION AS TypeDescription,
+                    f.FACILITY_DHB_CODE AS DhbCode,
+                    f.FACILITY_DHB_NAME AS DhbName
+                FROM asset a
+                LEFT JOIN facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                WHERE a.ASSET_LOCATION = @Location
+                ORDER BY f.FACILITY_NAME, a.ASSET_DESCRIPTION
+            ";
+
+            foreach (var location in locations)
+            {
+                var assets = (await QueryAsync<AssetDTO>(sqlAssets, new { Location = location })).ToList();
+
+                var locationNode = new MatrixNode
+                {
+                    Id = location ?? "Unknown Location",
+                    Label = location ?? "Unknown Location",
+                    Type = "location",
+                    Children = assets
+                        .GroupBy(f => f.FacilityName ?? "Unknown Facility")
+                        .Select(facGroup => new MatrixNode
+                        {
+                            Id = facGroup.First().FacilityId?.ToString() ?? facGroup.Key,
+                            Label = facGroup.Key,
+                            Type = "facility",
+                            Children = facGroup
+                                .Select(asset => new MatrixNode
+                                {
+                                    Id = asset.Id.ToString(),
+                                    Label = asset.Description ?? asset.Code ?? "Unnamed Asset",
+                                    Type = "asset"
+                                })
+                                .ToList()
+                        })
+                        .ToList()
+                };
+
+                groups.Add(locationNode);
+            }
+
+            return new MatrixLayout
+            {
+                Grouping = new[] { "location", "facility", "asset" },
+                Groups = groups
+            };
         }
     }
 }

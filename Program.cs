@@ -71,4 +71,7 @@ builder.Services.AddScoped<IAssetService, AssetService>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 
+builder.Services.AddScoped<ISessionOverrideRepository, SessionOverrideRepository>();
+builder.Services.AddScoped<ISessionOverrideService, SessionOverrideService>();
+
 builder.Build().Run();

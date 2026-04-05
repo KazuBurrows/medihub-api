@@ -11,7 +11,7 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task<TemplateDTO> PutTemplateDTO(int id, int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force);
         Task<TemplateDTO> CreateTemplateDTO(int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force);
         Task Delete(int id);
-        Task<string> ApplyTemplate(DateOnly date);
+        Task<string> ApplyTemplate(DateOnly date, int cycleWeek);
         Task<IEnumerable<TemplateDTO>> GetAllDTO();
         Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week);
 

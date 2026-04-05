@@ -47,9 +47,9 @@ namespace MediHub.Application.Services
             await _repository.Delete(id);
         }
 
-        public async Task<string> ApplyTemplate(DateOnly date)
+        public async Task<string> ApplyTemplate(DateOnly date, int cycleWeek)
         {
-            return await _repository.ApplyTemplate(date);
+            return await _repository.ApplyTemplate(date, cycleWeek);
         }
 
         public async Task<IEnumerable<TemplateDTO>> GetAllDTO()

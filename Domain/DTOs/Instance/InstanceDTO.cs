@@ -29,6 +29,8 @@ namespace MediHub.Domain.DTOs
 
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
+        [Column("SESSION_SURGEON_TYPE")]
+        public string? SurgeonType { get; set; }
         public string? SurgeonName { get; set; }
 
         [Column("SESSION_SPECIALTY_KEY")]
@@ -83,6 +85,21 @@ namespace MediHub.Domain.DTOs
         [Column("STAFF_NAME")]
         public string? LastUpdatedByUserName { get; set; }
 
+
+
+        [Column("INSTANCE_SESSION_OVERRIDE_KEY")]
+        public int? SessionOverrideId { get; set; }
+        public bool? SessionOverrideIsAcute { get; set; }
+        public bool? SessionOverrideIsPaediatric { get; set; }
+        public string? SessionOverrideAnaestheticType { get; set; }
+        public int? SessionOverrideSpecialtyId { get; set; }
+        public string? SessionOverrideSpecialtyDescription { get; set; }
+        public int? SessionOverrideSubspecialtyId { get; set; }
+        public string? SessionOverrideSubspecialtyName { get; set; }
+        public int? SessionOverrideSurgeonId { get; set; }
+        [Column("SESSION_OVERRIDE_SURGEON_TYPE")]
+        public string? SessionOverrideSurgeonType { get; set; }
+        public string? SessionOverrideSurgeonName { get; set; }
 
 
         public List<StaffDTO>? Staffs { get; set; }

@@ -23,8 +23,9 @@ public class TemplateByDateCollection
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "post", "options",
-                    Route = "templates/apply/{date}")] HttpRequestData req,
+                    Route = "templates/apply/{date}/{cycleWeek}")] HttpRequestData req,
         string date,
+        int cycleWeek,
         FunctionContext context)
     {
         var log = context.GetLogger("TemplateByDateCollection");
@@ -36,7 +37,7 @@ public class TemplateByDateCollection
         {
             DateTime dateTime = DateTime.Parse(date);
             DateOnly dateOnly = DateOnly.FromDateTime(dateTime);
-            var res = await _templateService.ApplyTemplate(dateOnly);
+            var res = await _templateService.ApplyTemplate(dateOnly, cycleWeek);
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteStringAsync(res);

@@ -24,5 +24,8 @@ namespace MediHub.Domain.Models
 
         [Column("INSTANCE_IS_OPEN")]
         public bool? IsOpen { get; set; }
+
+        [Column("INSTANCE_SESSION_OVERRIDE_KEY")]
+        public int? SessionOverrideId { get; set; }
     }
 }
