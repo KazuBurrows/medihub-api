@@ -66,14 +66,22 @@ namespace MediHub.Domain.Matrix
         [Column("SESSION_IS_PAEDIATRIC")]
         public bool? IsPediatric { get; set; }
 
-        [Column("SESSION_ANAESTHETIC_TYPE")]
-        public string? AnaestheticType { get; set; }
+        [Column("SESSION_ANAESTHETIC_TYPE_KEY")]
+        public int? AnaestheticTypeId { get; set; }
+        public string? AnaestheticTypeCode { get; set; }
+        public string? AnaestheticTypeDescription { get; set; }
 
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
-        [Column("SESSION_SURGEON_TYPE")]
-        public string? SurgeonType { get; set; }
+        [Column("SESSION_SURGEON_TYPE_KEY")]
+        public int? SurgeonTypeId { get; set; }
+
+        [Column("SESSION_SURGEON_TYPE_CODE")]
+        public string? SurgeonTypeCode { get; set; }
+
+        [Column("SESSION_SURGEON_TYPE_DESCRIPTION")]
+        public string? SurgeonTypeDescription { get; set; }
 
         [Column("STAFF_NAME")]
         public string? SurgeonName { get; set; }
@@ -91,6 +99,8 @@ namespace MediHub.Domain.Matrix
         public bool? IsOpen { get; set; }
 
         public int? StaffCount { get; set; }
+
+        public int? SessionOverrideCount { get; set; }
     }
 
 

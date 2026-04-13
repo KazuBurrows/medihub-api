@@ -74,4 +74,10 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ISessionOverrideRepository, SessionOverrideRepository>();
 builder.Services.AddScoped<ISessionOverrideService, SessionOverrideService>();
 
+builder.Services.AddScoped<ISurgeonTypeRepository, SurgeonTypeRepository>();
+builder.Services.AddScoped<ISurgeonTypeService, SurgeonTypeService>();
+
+builder.Services.AddScoped<IAnaestheticTypeRepository, AnaestheticTypeRepository>();
+builder.Services.AddScoped<IAnaestheticTypeService, AnaestheticTypeService>();
+
 builder.Build().Run();

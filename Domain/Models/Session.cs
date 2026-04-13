@@ -19,14 +19,14 @@ namespace MediHub.Domain.Models
         [Column("SESSION_IS_PAEDIATRIC")]
         public bool? IsPediatric { get; set; }
 
-        [Column("SESSION_ANAESTHETIC_TYPE")]
-        public string? AnaestheticType { get; set; }
+        [Column("SESSION_ANAESTHETIC_TYPE_KEY")]
+        public int? AnaestheticTypeId { get; set; }
 
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
-        [Column("SESSION_SURGEON_TYPE")]
-        public string? SurgeonType { get; set; }
+        [Column("SESSION_SURGEON_TYPE_KEY")]
+        public int? SurgeonTypeId { get; set; }
 
         [Column("SESSION_SPECIALTY_KEY")]
         public int? SpecialtyId { get; set; }

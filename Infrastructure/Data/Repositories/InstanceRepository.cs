@@ -46,9 +46,14 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_TITLE AS SessionTitle,
                     s.SESSION_IS_ACUTE AS SessionIsAcute,
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
-                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
+                    sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
+                    sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -63,8 +68,12 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
                     so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
-                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
-                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY AS SessionOverrideAnaestheticTypeId,
+                    so_at.ANAESTHETIC_TYPE_CODE AS SessionOverrideAnaestheticTypeCode,
+                    so_at.ANAESTHETIC_TYPE_DESCRIPTION AS SessionOverrideAnaestheticTypeDescription,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE_KEY AS SessionOverrideSurgeonTypeId,
+                    so_sty.SURGEON_TYPE_CODE AS SessionOverrideSurgeonTypeCode,
+                    so_sty.SURGEON_TYPE_DESCRIPTION AS SessionOverrideSurgeonTypeDescription,
 
                     so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
                     so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
@@ -74,6 +83,18 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
                     so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
+
+                    CASE 
+                        WHEN i.INSTANCE_SESSION_OVERRIDE_KEY IS NULL THEN 0
+                        ELSE
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_ACUTE IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_PAEDIATRIC IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SUBSPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END)
+                    END AS SessionOverrideCount,
 
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
@@ -114,6 +135,12 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.subspecialty so_subs
                     ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
 
+                LEFT JOIN dbo.anaesthetic_type so_at
+                    ON so_at.ANAESTHETIC_TYPE_KEY = so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY
+
+                LEFT JOIN dbo.surgeon_type so_sty
+                    ON so_sty.SURGEON_TYPE_KEY = so.SESSION_OVERRIDE_SURGEON_TYPE_KEY
+
                 -- Session joins
                 LEFT JOIN dbo.staff surgeon
                     ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
@@ -123,6 +150,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.subspecialty subs
                     ON subs.SUBSPECIALTY_KEY = s.SESSION_SUBSPECIALTY_KEY
+
+                LEFT JOIN dbo.anaesthetic_type at
+                    ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
 
                 -- Asset
                 LEFT JOIN dbo.asset a
@@ -147,6 +177,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.role r
                     ON r.ROLE_KEY = ist.ROLE_KEY
+
+                LEFT JOIN dbo.surgeon_type sty
+                    ON sty.SURGEON_TYPE_KEY = s.SESSION_SURGEON_TYPE_KEY
 
                 WHERE ist.STAFF_KEY = @StaffId
             ";
@@ -350,9 +383,14 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_TITLE AS SessionTitle,
                     s.SESSION_IS_ACUTE AS SessionIsAcute,
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
-                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
+                    sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
+                    sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -367,8 +405,12 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
                     so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
-                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
-                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY AS SessionOverrideAnaestheticTypeId,
+                    so_at.ANAESTHETIC_TYPE_CODE AS SessionOverrideAnaestheticTypeCode,
+                    so_at.ANAESTHETIC_TYPE_DESCRIPTION AS SessionOverrideAnaestheticTypeDescription,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE_KEY AS SessionOverrideSurgeonTypeId,
+                    so_sty.SURGEON_TYPE_CODE AS SessionOverrideSurgeonTypeCode,
+                    so_sty.SURGEON_TYPE_DESCRIPTION AS SessionOverrideSurgeonTypeDescription,
 
                     so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
                     so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
@@ -378,6 +420,18 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
                     so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
+
+                    CASE 
+                        WHEN i.INSTANCE_SESSION_OVERRIDE_KEY IS NULL THEN 0
+                        ELSE
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_ACUTE IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_PAEDIATRIC IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SUBSPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END)
+                    END AS SessionOverrideCount,
 
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
@@ -405,6 +459,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.session s
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
+                LEFT JOIN dbo.surgeon_type sty
+                    ON sty.SURGEON_TYPE_KEY = s.SESSION_SURGEON_TYPE_KEY
+
                 -- Join session override
                 LEFT JOIN dbo.session_override so
                     ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
@@ -417,6 +474,12 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.subspecialty so_subs
                     ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
+
+                LEFT JOIN dbo.anaesthetic_type so_at
+                    ON so_at.ANAESTHETIC_TYPE_KEY = so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY
+
+                LEFT JOIN dbo.surgeon_type so_sty
+                    ON so_sty.SURGEON_TYPE_KEY = so.SESSION_OVERRIDE_SURGEON_TYPE_KEY
 
                 LEFT JOIN dbo.staff surgeon
                     ON surgeon.STAFF_KEY = s.SESSION_SURGEON_KEY
@@ -447,6 +510,11 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.role r
                     ON r.ROLE_KEY = ist.ROLE_KEY
+
+                LEFT JOIN dbo.anaesthetic_type at
+                    ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
+
+                
             ";
             
             var lookup = new Dictionary<int, InstanceDTO>();
@@ -496,9 +564,14 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_TITLE AS SessionTitle,
                     s.SESSION_IS_ACUTE AS SessionIsAcute,
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
-                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
+                    sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
+                    sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+                    
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -513,8 +586,12 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
                     so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
-                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
-                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY AS SessionOverrideAnaestheticTypeId,
+                    so_at.ANAESTHETIC_TYPE_CODE AS SessionOverrideTypeCode,
+                    so_at.ANAESTHETIC_TYPE_DESCRIPTION AS SessionOverrideTypeDescription,
+                    so.SESSION_OVERRIDE_SURGEON_TYPE_KEY AS SessionOverrideSurgeonTypeId,
+                    so_sty.SURGEON_TYPE_CODE AS SessionOverrideSurgeonTypeCode,
+                    so_sty.SURGEON_TYPE_DESCRIPTION AS SessionOverrideSurgeonTypeDescription,
 
                     so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
                     so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
@@ -524,6 +601,18 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
                     so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
+
+                    CASE 
+                        WHEN i.INSTANCE_SESSION_OVERRIDE_KEY IS NULL THEN 0
+                        ELSE
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_ACUTE IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_PAEDIATRIC IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SUBSPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END)
+                    END AS SessionOverrideCount,
 
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
@@ -551,9 +640,21 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.session s
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
+                LEFT JOIN dbo.surgeon_type sty
+                    ON sty.SURGEON_TYPE_KEY = s.SESSION_SURGEON_TYPE_KEY
+
                 -- Session override joins
                 LEFT JOIN dbo.session_override so
                     ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
+
+                LEFT JOIN dbo.anaesthetic_type at
+                    ON at.ANAESTHETIC_TYPE_KEY = S.SESSION_ANAESTHETIC_TYPE_KEY
+
+                LEFT JOIN dbo.anaesthetic_type so_at
+                    ON so_at.ANAESTHETIC_TYPE_KEY = so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY
+
+                LEFT JOIN dbo.surgeon_type so_sty
+                    ON so_sty.SURGEON_TYPE_KEY = so.SESSION_OVERRIDE_SURGEON_TYPE_KEY
 
                 LEFT JOIN dbo.staff so_surgeon
                     ON so_surgeon.STAFF_KEY = so.SESSION_OVERRIDE_SURGEON_KEY
@@ -756,9 +857,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_TITLE AS SessionTitle,
                     s.SESSION_IS_ACUTE AS SessionIsAcute,
                     s.SESSION_IS_PAEDIATRIC AS SessionIsPaediatric,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
+
                     s.SESSION_SURGEON_KEY AS SurgeonId,
-                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
+                    sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
+                    sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
                     surgeon.STAFF_NAME AS SurgeonName,
 
                     s.SESSION_SPECIALTY_KEY AS SpecialtyId,
@@ -773,8 +880,13 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_IS_ACUTE AS SessionOverrideIsAcute,
                     so.SESSION_OVERRIDE_IS_PAEDIATRIC AS SessionOverrideIsPaediatric,
-                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE AS SessionOverrideAnaestheticType,
-                    so.SESSION_OVERRIDE_SURGEON_TYPE AS SessionOverrideSurgeonType,
+                    so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY AS SessionOverrideAnaestheticTypeId,
+                    so_at.ANAESTHETIC_TYPE_CODE AS SessionOverrideAnaestheticTypeCode,
+                    so_at.ANAESTHETIC_TYPE_DESCRIPTION AS SessionOverrideAnaestheticTypeDescription,
+
+                    so.SESSION_OVERRIDE_SURGEON_TYPE_KEY AS SessionOverrideSurgeonTypeId,
+                    so_sty.SURGEON_TYPE_CODE AS SessionOverrideSurgeonTypeCode,
+                    so_sty.SURGEON_TYPE_DESCRIPTION AS SessionOverrideSurgeonTypeDescription,
 
                     so.SESSION_OVERRIDE_SPECIALTY_KEY AS SessionOverrideSpecialtyId,
                     so_sp.SPECIALTY_DESCRIPTION AS SessionOverrideSpecialtyDescription,
@@ -784,6 +896,18 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     so.SESSION_OVERRIDE_SURGEON_KEY AS SessionOverrideSurgeonId,
                     so_surgeon.STAFF_NAME AS SessionOverrideSurgeonName,
+
+                    CASE 
+                        WHEN i.INSTANCE_SESSION_OVERRIDE_KEY IS NULL THEN 0
+                        ELSE
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_ACUTE IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_PAEDIATRIC IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SUBSPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END)
+                    END AS SessionOverrideCount,
 
                     -- Asset
                     a.ASSET_CODE AS AssetCode,
@@ -811,9 +935,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.session s
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
+                LEFT JOIN dbo.surgeon_type sty
+                    ON sty.SURGEON_TYPE_KEY = s.SESSION_SURGEON_TYPE_KEY
+
                 -- Session override joins
                 LEFT JOIN dbo.session_override so
                     ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
+
+                LEFT JOIN dbo.surgeon_type so_sty
+                    ON so_sty.SURGEON_TYPE_KEY = so.SESSION_OVERRIDE_SURGEON_TYPE_KEY
 
                 LEFT JOIN dbo.staff so_surgeon
                     ON so_surgeon.STAFF_KEY = so.SESSION_OVERRIDE_SURGEON_KEY
@@ -823,6 +953,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.subspecialty so_subs
                     ON so_subs.SUBSPECIALTY_KEY = so.SESSION_OVERRIDE_SUBSPECIALTY_KEY
+
+                LEFT JOIN dbo.anaesthetic_type so_at
+                    ON so_at.ANAESTHETIC_TYPE_KEY = so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY
 
                 -- Session joins
                 LEFT JOIN dbo.staff surgeon
@@ -857,6 +990,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.role r
                     ON r.ROLE_KEY = ist.ROLE_KEY
+
+                LEFT JOIN dbo.anaesthetic_type at
+                    ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
 
                 WHERE i.INSTANCE_KEY = @Id
             ";
@@ -1027,9 +1163,11 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_TITLE AS SessionTitle,
                     s.SESSION_IS_ACUTE AS IsAcute,
                     s.SESSION_IS_PAEDIATRIC AS IsPediatric,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
                     s.SESSION_SURGEON_KEY AS SurgeonId,
-                    s.SESSION_SURGEON_TYPE AS SurgeonType,
+                    s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
                     st.STAFF_NAME AS SurgeonName,
 
                     i.INSTANCE_START_DATETIME AS StartDateTime,
@@ -1038,7 +1176,19 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     (SELECT COUNT(*) 
                     FROM INSTANCE_STAFF ist 
-                    WHERE ist.INSTANCE_KEY = i.INSTANCE_KEY) AS StaffCount
+                    WHERE ist.INSTANCE_KEY = i.INSTANCE_KEY) AS StaffCount,
+
+                    CASE 
+                        WHEN i.INSTANCE_SESSION_OVERRIDE_KEY IS NULL THEN 0
+                        ELSE
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_ACUTE IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_IS_PAEDIATRIC IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_ANAESTHETIC_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SUBSPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_KEY IS NOT NULL THEN 1 ELSE 0 END) +
+                            (CASE WHEN so.SESSION_OVERRIDE_SURGEON_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END)
+                    END AS SessionOverrideCount,
 
                 FROM FACILITY f
 
@@ -1054,6 +1204,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN STAFF st 
                     ON st.STAFF_KEY = s.SESSION_SURGEON_KEY
+
+                LEFT JOIN ANAESTHETIC_TYPE at
+                    ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
 
                 ORDER BY 
                     f.FACILITY_NAME,

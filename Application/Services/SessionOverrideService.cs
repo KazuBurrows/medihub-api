@@ -14,9 +14,9 @@ namespace MediHub.Application.Services
             _repository = repository;
         }
 
-        public Task<SessionOverride> Create(SessionOverride s)
+        public Task<SessionOverride> Create(int instanceId, SessionOverride s)
         {
-            return _repository.Create(s);
+            return _repository.Create(instanceId, s);
         }
 
         public async Task Delete(int id)
@@ -38,6 +38,11 @@ namespace MediHub.Application.Services
         public async Task<SessionOverrideDTO> GetByIdDTO(int id)
         {
             return await _repository.GetByIdDTO(id);
+        }
+
+        public async Task<int> getIdByInstanceId(int instanceId)
+        {
+            return await _repository.getIdByInstanceId(instanceId);
         }
     }
 }

@@ -1,0 +1,23 @@
+
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MediHub.Domain.Models
+{
+    [Table("specialty")]
+    public class SpecialtyDTO
+    {
+        [Key]
+        [Column("SPECIALTY_KEY")]
+        public int Id { get; set; }
+
+        [Column("SPECIALTY_CODE")]
+        public string? Code { get; set; }
+
+        [Column("SPECIALTY_DESCRIPTION")]
+        public string? Description { get; set; }
+
+        public int SessionCount { get; set; }
+    }
+}

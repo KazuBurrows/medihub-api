@@ -24,13 +24,19 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_IS_PAEDIATRIC")]
         public bool? SessionIsPaediatric { get; set; }
 
-        [Column("SESSION_ANAESTHETIC_TYPE")]
-        public string? AnaestheticType { get; set; }
+        [Column("SESSION_ANAESTHETIC_TYPE_KEY")]
+        public int? AnaestheticTypeId { get; set; }
+        public string? AnaestheticTypeCode { get; set; }
+        public string? AnaestheticTypeDescription { get; set; }
 
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
-        [Column("SESSION_SURGEON_TYPE")]
-        public string? SurgeonType { get; set; }
+        [Column("SESSION_SURGEON_TYPE_KEY")]
+        public int? SurgeonTypeId { get; set; }
+        [Column("SESSION_SURGEON_TYPE_CODE")]
+        public string? SurgeonTypeCode { get; set; }
+        [Column("SESSION_SURGEON_TYPE_DESCRIPTION")]
+        public string? SurgeonTypeDescription { get; set; }
         public string? SurgeonName { get; set; }
 
         [Column("SESSION_SPECIALTY_KEY")]
@@ -91,18 +97,28 @@ namespace MediHub.Domain.DTOs
         public int? SessionOverrideId { get; set; }
         public bool? SessionOverrideIsAcute { get; set; }
         public bool? SessionOverrideIsPaediatric { get; set; }
-        public string? SessionOverrideAnaestheticType { get; set; }
+
+        public int? SessionOverrideAnaestheticTypeId { get; set; }
+        public string? SessionOverrideAnaestheticTypeCode { get; set; }
+        public string? SessionOverrideAnaestheticTypeDescription { get; set; }
+
         public int? SessionOverrideSpecialtyId { get; set; }
+        public string? SessionOverrideSpecialtyCode { get; set; }
         public string? SessionOverrideSpecialtyDescription { get; set; }
+
         public int? SessionOverrideSubspecialtyId { get; set; }
         public string? SessionOverrideSubspecialtyName { get; set; }
         public int? SessionOverrideSurgeonId { get; set; }
-        [Column("SESSION_OVERRIDE_SURGEON_TYPE")]
-        public string? SessionOverrideSurgeonType { get; set; }
+        [Column("SESSION_OVERRIDE_SURGEON_TYPE_KEY")]
+        public int? SessionOverrideSurgeonTypeId { get; set; }
+        public string? SessionOverrideSurgeonTypeCode { get; set; }
+        public string? SessionOverrideSurgeonTypeDescription { get; set; }
         public string? SessionOverrideSurgeonName { get; set; }
 
 
         public List<StaffDTO>? Staffs { get; set; }
+
+        public int? SessionOverrideCount { get; set;}
 
     }
 }

@@ -9,5 +9,7 @@ namespace MediHub.Application.Interfaces
         Task<int> Update(Specialty s);
         Task<IEnumerable<Specialty>> GetAll();
         Task<Specialty> GetById(int id);
+        Task<IEnumerable<SpecialtyDTO>> GetAllDTO();
+        Task<IEnumerable<Subspecialty>> GetSubspecialtiesBySpecialty(int id);
     }
 }

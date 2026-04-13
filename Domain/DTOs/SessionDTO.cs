@@ -19,14 +19,18 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_IS_PAEDIATRIC")]
         public bool? IsPediatric { get; set; }
 
-        [Column("SESSION_ANAESTHETIC_TYPE")]
-        public string? AnaestheticType { get; set; }
+        [Column("SESSION_ANAESTHETIC_TYPE_KEY")]
+        public int? AnaestheticTypeId { get; set; }
+        public string? AnaestheticTypeCode { get; set; }
+        public string? AnaestheticTypeDescription { get; set; }
 
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }
 
-        [Column("SESSION_SURGEON_TYPE")]
-        public string? SurgeonType { get; set; }
+        [Column("SESSION_SURGEON_TYPE_KEY")]
+        public int? SurgeonTypeId { get; set; }
+        public string? SurgeonTypeCode { get; set; }
+        public string? SurgeonTypeDescription { get; set; }
 
         public string? SurgeonName { get; set; }
 

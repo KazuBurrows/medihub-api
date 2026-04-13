@@ -31,7 +31,8 @@ public class SessionOverrideItem
         // GET /sessionoverride/{id}
         if (req.Method == "GET")
         {
-            var sessionOverride = await _sessionOverrideService.GetById(id);
+            var s_id = await _sessionOverrideService.getIdByInstanceId(id);
+            var sessionOverride = await _sessionOverrideService.GetById(s_id);
 
             if (sessionOverride == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
@@ -46,6 +47,7 @@ public class SessionOverrideItem
         {
             try
             {
+                var s_id = await _sessionOverrideService.getIdByInstanceId(id);
                 await _sessionOverrideService.Delete(id);
                 return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
             }
@@ -63,21 +65,11 @@ public class SessionOverrideItem
             if (errorResponse != null)
                 return errorResponse;
 
-            // OPTIONAL: Validate body ID if it exists
-            if (data.Id != id)
+            var s_id = await _sessionOverrideService.getIdByInstanceId(id);
+            data.Id = s_id;
+            if (data.Id == 0 || data.Id == null)
             {
-                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-                await bad.WriteStringAsync(
-                    "ID in request body does not match route ID."
-                );
-                return bad;
-            }
-
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-
-            if (data.Id == 0)
-            {
-                var created = await _sessionOverrideService.Create(data);
+                var created = await _sessionOverrideService.Create(id, data);
                 if (created == null)
                     return req.CreateResponse(HttpStatusCode.InternalServerError);
 
@@ -85,7 +77,8 @@ public class SessionOverrideItem
             } else
             {
                 // Force route ID to be authoritative
-                data.Id = id;
+                s_id = await _sessionOverrideService.getIdByInstanceId(id);
+                data.Id = s_id;
 
                 var updated = await _sessionOverrideService.Update(data);
 

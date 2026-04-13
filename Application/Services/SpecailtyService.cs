@@ -37,6 +37,16 @@ namespace MediHub.Application.Services
         {
             return await _repository.GetById(id);
         }
+
+        public async Task<IEnumerable<SpecialtyDTO>> GetAllDTO()
+        {
+            return await _repository.GetAllDTO();
+        }
+
+        public async Task<IEnumerable<Subspecialty>> GetSubspecialtiesBySpecialty(int id)
+        {
+            return await _repository.GetSubspecialtiesBySpecialty(id);
+        }
     }
 }
 

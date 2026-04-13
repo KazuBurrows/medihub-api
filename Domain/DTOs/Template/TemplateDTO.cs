@@ -24,8 +24,10 @@ namespace MediHub.Domain.DTOs
         [Column("SESSION_IS_PAEDIATRIC")]
         public bool? SessionIsPaediatric { get; set; }
 
-        [Column("SESSION_ANAESTHETIC_TYPE")]
-        public string? AnaestheticType { get; set; }
+        [Column("SESSION_ANAESTHETIC_TYPE_KEY")]
+        public int? AnaestheticTypeId { get; set; }
+        public string? AnaestheticTypeCode { get; set; }
+        public string? AnaestheticTypeDescription { get; set; }
 
         [Column("SESSION_SURGEON_KEY")]
         public int? SurgeonId { get; set; }

@@ -42,7 +42,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_TITLE AS SessionName,
                     s.SESSION_IS_PAEDIATRIC AS IsPediatric,
                     s.SESSION_IS_ACUTE AS IsAcute,
-                    s.SESSION_ANAESTHETIC_TYPE AS AnaestheticType,
+                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
 
                     -- Surgeon
                     st.STAFF_NAME AS SurgeonName,
@@ -67,6 +69,9 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                 LEFT JOIN dbo.staff st
                     ON s.SESSION_SURGEON_KEY = st.STAFF_KEY
+
+                LEFT JOIN dbo.anaesthetic_type at
+                    ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
 
                 WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
                 /**FACILITY_FILTER**/
@@ -114,50 +119,6 @@ namespace MediHub.Infrastructure.Data.Repositories
                 dynamicSql,
                 parameters)).ToList();
         }
-
-
-
-
-        // public async Task<TemplateDTO> GetTemplateDTO(int templateId)
-        // {
-        //     const string sql = @"
-        //         SELECT
-        //             st.id AS Id,
-        //             st.session_id AS SessionId,
-        //             s.name AS SessionName,
-        //             s.is_acute AS IsAcute,
-        //             s.is_pediatric AS IsPediatric,
-        //             s.anaesthetic_type AS AnaestheticType,
-        //             CONCAT(stf.first_name, ' ', stf.last_name) AS SurgeonName,
-        //             sp.name AS SpecialtyName,
-        //             sub.name AS SubspecialtyName,
-        //             st.asset_id AS AssetId,
-        //             t.name AS AssetName,
-        //             f.name AS FacilityName,
-        //             st.week AS Week,
-        //             st.day_of_week AS DayOfWeek,
-        //             st.start_time AS StartTime,
-        //             st.end_time AS EndTime,
-        //             st.is_open AS IsOpen
-        //         FROM dbo.instance_template st
-        //         INNER JOIN dbo.session s ON st.session_id = s.id
-        //         INNER JOIN dbo.asset t ON st.asset_id = t.id
-        //         INNER JOIN dbo.facility f ON t.facility_id = f.id
-        //         LEFT JOIN dbo.staff stf ON s.surgeon_id = stf.id
-        //         LEFT JOIN dbo.specialty sp ON s.specialty_id = sp.id
-        //         LEFT JOIN dbo.subspecialty sub ON s.subspecialty_id = sub.id
-        //         WHERE st.id = @TemplateId;
-        //     ";
-
-        //     var template = (await QueryAsync<TemplateDTO>(sql, new { TemplateId = templateId }))
-        //                     .FirstOrDefault();
-
-        //     if (template == null)
-        //         return null!; // or throw an exception            
-
-        //     return template;
-        // }
-
 
 
 
@@ -507,7 +468,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_TITLE                   AS SessionTitle,
                     se.SESSION_IS_ACUTE                AS SessionIsAcute,
                     se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
-                    se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
+                    se.SESSION_ANAESTHETIC_TYPE_KEY       AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE           AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION    AS AnaestheticTypeDescription,
                     se.SESSION_SURGEON_KEY            AS SurgeonId,
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
@@ -534,6 +497,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
                 LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
                 LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
                 ORDER BY it.INSTANCE_TEMPLATE_KEY;
             ";
 
@@ -570,7 +534,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_TITLE                   AS SessionTitle,
                     se.SESSION_IS_ACUTE                AS SessionIsAcute,
                     se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
-                    se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
+                    se.SESSION_ANAESTHETIC_TYPE_KEY       AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE           AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION    AS AnaestheticTypeDescription,
                     se.SESSION_SURGEON_KEY            AS SurgeonId,
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
@@ -597,6 +563,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
                 LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
                 LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
                 WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
                 ORDER BY it.INSTANCE_TEMPLATE_KEY;
             ";
@@ -654,7 +621,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_TITLE                   AS SessionTitle,
                     se.SESSION_IS_ACUTE                AS SessionIsAcute,
                     se.SESSION_IS_PAEDIATRIC           AS SessionIsPaediatric,
-                    se.SESSION_ANAESTHETIC_TYPE       AS AnaestheticType,
+                    se.SESSION_ANAESTHETIC_TYPE_KEY       AS AnaestheticTypeId,
+                    at.ANAESTHETIC_TYPE_CODE           AS AnaestheticTypeCode,
+                    at.ANAESTHETIC_TYPE_DESCRIPTION    AS AnaestheticTypeDescription,
                     se.SESSION_SURGEON_KEY            AS SurgeonId,
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
@@ -681,6 +650,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
                 LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
                 LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
                 WHERE it.INSTANCE_TEMPLATE_KEY = @Id;
             ";
 
@@ -779,77 +749,6 @@ namespace MediHub.Infrastructure.Data.Repositories
             return await ExecuteScalarAsync<int>(sql, t);
         }
 
-
-        // public async Task<string?> CheckForInstanceClashes(
-        //     int? instanceId,      // null for create
-        //     int assetId,
-        //     DateTime start,
-        //     DateTime end,
-        //     List<int> staffs)
-        // {
-        //     /* ---------------- INSTANCE CLASH ---------------- */
-        //     const string clashCheckSql = @"
-        //         SELECT i.Id
-        //         FROM dbo.instance i
-        //         WHERE i.asset_id = @AssetId
-        //         AND (@InstanceId IS NULL OR i.id <> @InstanceId)
-        //         AND i.start_datetime < @EndDateTime
-        //         AND i.end_datetime > @StartDateTime
-        //     ";
-
-        //     var existingInstances = await QueryAsync<int>(clashCheckSql, new
-        //     {
-        //         AssetId = assetId,
-        //         InstanceId = instanceId,
-        //         StartDateTime = start,
-        //         EndDateTime = end
-        //     });
-
-        //     /* ---------------- STAFF CLASH ---------------- */
-        //     const string staffClashSql = @"
-        //         SELECT s.staff_id
-        //         FROM dbo.instance_staff s
-        //         INNER JOIN dbo.instance i ON s.instance_id = i.id
-        //         WHERE s.staff_id IN @StaffIds
-        //         AND (@InstanceId IS NULL OR i.id <> @InstanceId)
-        //         AND i.start_datetime < @EndDateTime
-        //         AND i.end_datetime > @StartDateTime
-        //     ";
-
-        //     var staffClashes = await QueryAsync<int>(staffClashSql, new
-        //     {
-        //         StaffIds = staffs,
-        //         InstanceId = instanceId,
-        //         StartDateTime = start,
-        //         EndDateTime = end
-        //     });
-
-        //     if (!existingInstances.Any() && !staffClashes.Any())
-        //         return null;
-
-        //     var lines = new List<string> { "Your changes conflict with existing data." };
-
-        //     if (existingInstances.Any())
-        //         lines.Add("Conflicting instance IDs: " + string.Join(", ", existingInstances));
-
-        //     if (staffClashes.Any())
-        //     {
-        //         const string staffQuery = @"
-        //             SELECT first_name AS FirstName, last_name AS LastName
-        //             FROM dbo.Staff
-        //             WHERE Id IN @StaffIds
-        //         ";
-
-        //         var staffNames = (await QueryAsync<(string FirstName, string LastName)>(
-        //             staffQuery,
-        //             new { StaffIds = staffClashes.ToArray() }))
-        //             .Select(s => $"{s.FirstName} {s.LastName}");
-
-        //         lines.Add("Conflicting staff: " + string.Join(", ", staffNames));
-        //     }
-
-        //     return string.Join(Environment.NewLine, lines);
-        // }
 
         public async Task<List<int>> GetInstanceClashes(
             int assetId,
