@@ -18,6 +18,9 @@ namespace MediHub.Domain.Models
         [Column("SPECIALTY_DESCRIPTION")]
         public string? Description { get; set; }
 
+        [Column("SPECIALTY_IS_VISIBLE")]
+        public bool? IsVisible { get; set; }
+
         public int SessionCount { get; set; }
     }
 }

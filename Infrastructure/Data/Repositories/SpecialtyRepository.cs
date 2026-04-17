@@ -14,7 +14,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 SELECT
                     SPECIALTY_KEY AS Id,
                     SPECIALTY_CODE AS Code,
-                    SPECIALTY_DESCRIPTION AS Description
+                    SPECIALTY_DESCRIPTION AS Description,
+                    SPECIALTY_IS_VISIBLE AS IsVisible
                 FROM dbo.specialty";
 
             return await QueryAsync<Specialty>(sql);
@@ -28,7 +29,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 SELECT
                     SPECIALTY_KEY AS Id,
                     SPECIALTY_CODE AS Code,
-                    SPECIALTY_DESCRIPTION AS Description
+                    SPECIALTY_DESCRIPTION AS Description,
+                    SPECIALTY_IS_VISIBLE AS IsVisible
                 FROM dbo.specialty
                 WHERE SPECIALTY_KEY = @Id";
 
@@ -39,9 +41,9 @@ namespace MediHub.Infrastructure.Data.Repositories
         public async Task<int> Create(Specialty s)
         {
             const string sql = @"
-                INSERT INTO dbo.specialty (SPECIALTY_CODE, SPECIALTY_DESCRIPTION)
+                INSERT INTO dbo.specialty (SPECIALTY_CODE, SPECIALTY_DESCRIPTION, SPECIALTY_IS_VISIBLE)
                 OUTPUT INSERTED.SPECIALTY_KEY
-                VALUES (@Code, @Description)";
+                VALUES (@Code, @Description, @IsVisible)";
 
             return await ExecuteScalarAsync<int>(sql, s);
         }
@@ -54,7 +56,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 UPDATE dbo.specialty
                 SET
                     SPECIALTY_CODE = @Code,
-                    SPECIALTY_DESCRIPTION = @Description
+                    SPECIALTY_DESCRIPTION = @Description,
+                    SPECIALTY_IS_VISIBLE = @IsVisible
                 WHERE SPECIALTY_KEY = @Id";
 
             return await ExecuteAsync(sql, s);
@@ -82,6 +85,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SPECIALTY_KEY AS Id,
                     s.SPECIALTY_CODE AS Code,
                     s.SPECIALTY_DESCRIPTION AS Description,
+                    s.SPECIALTY_IS_VISIBLE AS IsVisible,
                     COUNT(sess.SESSION_KEY) AS SessionCount
                 FROM dbo.specialty s
                 LEFT JOIN dbo.session sess
@@ -89,10 +93,12 @@ namespace MediHub.Infrastructure.Data.Repositories
                 GROUP BY
                     s.SPECIALTY_KEY,
                     s.SPECIALTY_CODE,
-                    s.SPECIALTY_DESCRIPTION
+                    s.SPECIALTY_DESCRIPTION,
+                    s.SPECIALTY_IS_VISIBLE
                 ORDER BY
                     s.SPECIALTY_DESCRIPTION
             ";
+
 
             return await QueryAsync<SpecialtyDTO>(sql);
         }
