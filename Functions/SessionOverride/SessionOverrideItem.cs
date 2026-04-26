@@ -49,7 +49,7 @@ public class SessionOverrideItem
             {
                 var s_id = await _sessionOverrideService.getIdByInstanceId(id);
                 await _sessionOverrideService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+                return await ApiResponseFactory.Success(req, "Session Override", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {

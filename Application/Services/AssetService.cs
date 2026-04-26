@@ -14,7 +14,7 @@ namespace MediHub.Application.Services
             _repository = repository;
         }
 
-        public Task<int> Create(Asset t)
+        public Task<Asset> Create(Asset t)
         {
             return _repository.Create(t);
         }
@@ -24,7 +24,7 @@ namespace MediHub.Application.Services
             await _repository.Delete(id);
         }
 
-        public Task<int> Update(Asset t)
+        public Task<Asset> Update(Asset t)
         {
             return _repository.Update(t);
         }

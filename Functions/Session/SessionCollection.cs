@@ -47,9 +47,7 @@ public class SessionCollection
 
             var created = await _sessionService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.Session>(req, "Session", created, ActionType.Created);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

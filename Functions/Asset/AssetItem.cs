@@ -48,7 +48,7 @@ public class AssetItem
             try
             {
                 await _assetService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+                return await ApiResponseFactory.Success(req, "Asset", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
@@ -82,9 +82,7 @@ public class AssetItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+            return await ApiResponseFactory.Success<Domain.Models.Asset>(req, "Asset", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

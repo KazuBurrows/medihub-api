@@ -22,10 +22,11 @@ public class InstanceMatrixCollection
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "options",
-            Route = "instances/matrix/{view}/{date}")]
+            Route = "instances/matrix/{view}/{date}/{versionId}")]
         HttpRequestData req,
         string view,
         string date,
+        int versionId,
         FunctionContext context)
     {
         var log = context.GetLogger("InstanceMatrixCollection");
@@ -35,7 +36,7 @@ public class InstanceMatrixCollection
         {
             DateTime dt = DateTime.Parse(date);
             DateOnly dateOnly = DateOnly.FromDateTime(dt);
-            var instance = await _instanceService.GetAllWeekMatrix(dateOnly);
+            var instance = await _instanceService.GetAllWeekMatrix(dateOnly, versionId);
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
             await ok.WriteAsJsonAsync(instance);

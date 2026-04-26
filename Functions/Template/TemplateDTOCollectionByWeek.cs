@@ -27,8 +27,9 @@ public class TemplateDTOCollectionByWeek
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "post", "options",
-            Route = "templates/detail/{week}")] HttpRequestData req,
+            Route = "templates/detail/{week}/{versionId}")] HttpRequestData req,
             int week,
+            int versionId,
             FunctionContext context)
     {
         var log = context.GetLogger("TemplateDTOCollection");
@@ -39,7 +40,7 @@ public class TemplateDTOCollectionByWeek
             var ok = req.CreateResponse(HttpStatusCode.OK);
             IEnumerable<TemplateDTO> templates;
 
-            templates = await _templateService.GetAllDTOByWeek(week);
+            templates = await _templateService.GetAllDTOByWeek(week, versionId);
             await ok.WriteAsJsonAsync(templates);
 
             return ok;

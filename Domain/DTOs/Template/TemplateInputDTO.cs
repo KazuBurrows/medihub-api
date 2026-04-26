@@ -10,4 +10,5 @@ public class TemplateInputDTO
     [Required] public TimeSpan EndTime { get; set; }
     public bool IsOpen { get; set; }
     public bool Force { get; set; } = false;
+    [Required] public int VersionId { get; set; }
 }

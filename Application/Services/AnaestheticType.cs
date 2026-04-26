@@ -13,7 +13,7 @@ namespace MediHub.Application.Services
             _repository = repository;
         }
 
-        public Task<int> Create(AnaestheticType s)
+        public Task<AnaestheticType> Create(AnaestheticType s)
         {
             return _repository.Create(s);
         }
@@ -23,7 +23,7 @@ namespace MediHub.Application.Services
             await _repository.Delete(id);
         }
 
-        public Task<int> Update(AnaestheticType s)
+        public Task<AnaestheticType> Update(AnaestheticType s)
         {
             return _repository.Update(s);
         }

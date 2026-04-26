@@ -13,14 +13,14 @@ namespace MediHub.Infrastructure.Data.Interfaces
         Task<Instance> GetById(int id);
         Task<IEnumerable<InstanceDTO>> GetAllByStaffId(int staffId);
         Task<IEnumerable<InstanceDTO>> GetAllDTO();
-        Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate);
+        Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate, int versionId);
 
         Task<InstanceDTO> CreateDTO(InstanceDTO i);
         Task<InstanceDTO> GetByIdDTO(int id);
         Task<InstanceDTO> UpdateDTO(InstanceDTO i);
         Task DeleteDTO(int id);
 
-        Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date);
+        Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date, int versionId);
         Task<MatrixLayout> GetMatrixLayout();
     }
 }

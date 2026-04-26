@@ -47,7 +47,7 @@ public class StaffItem
             try
             {
                 await _staffService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+                return await ApiResponseFactory.Success(req, "Staff", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
@@ -81,9 +81,7 @@ public class StaffItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+            return await ApiResponseFactory.Success<Domain.Models.Staff>(req, "Staff", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

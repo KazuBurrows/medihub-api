@@ -36,9 +36,9 @@ namespace MediHub.Application.Services
             return await _repository.GetAll();
         }
 
-        public async Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate)
+        public async Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate, int versionId)
         {
-            return await _repository.GetAllDTOByDate(startDate, endDate);
+            return await _repository.GetAllDTOByDate(startDate, endDate, versionId);
         }
 
         public async Task<Instance> GetById(int id)
@@ -76,9 +76,9 @@ namespace MediHub.Application.Services
             await _repository.DeleteDTO(id);
         }
 
-        public async Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date)
+        public async Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date, int versionId)
         {
-            return await _repository.GetAllWeekMatrix(date);
+            return await _repository.GetAllWeekMatrix(date, versionId);
         }
 
         public async Task<MatrixLayout> GetMatrixLayout()

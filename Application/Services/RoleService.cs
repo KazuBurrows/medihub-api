@@ -13,7 +13,7 @@ namespace MediHub.Application.Services
             _repository = repository;
         }
 
-        public Task<int> Create(Role r)
+        public Task<Role> Create(Role r)
         {
             return _repository.Create(r);
         }
@@ -23,7 +23,7 @@ namespace MediHub.Application.Services
             await _repository.Delete(id);
         }
 
-        public Task<int> Update(Role r)
+        public Task<Role> Update(Role r)
         {
             return _repository.Update(r);
         }

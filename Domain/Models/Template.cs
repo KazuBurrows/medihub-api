@@ -36,5 +36,8 @@ namespace MediHub.Domain.Models
 
         [Column("INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY")]
         public int? LastUpdatedByUserId { get; set; }
+
+        [Column("INSTANCE_TEMPLATE_VERSION_KEY")]
+        public int? VersionId { get; set; }
     }
 }

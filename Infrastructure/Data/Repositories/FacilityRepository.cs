@@ -47,7 +47,7 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Facility f)
+        public async Task<Facility> Create(Facility f)
         {
             const string sql = @"
                 INSERT INTO dbo.facility (
@@ -68,12 +68,13 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @DhbName
                 )";
 
-            return await ExecuteScalarAsync<int>(sql, f);
+            var id = await ExecuteScalarAsync<int>(sql, f);
+            return await GetById(id);
         }
 
 
 
-        public async Task<int> Update(Facility f)
+        public async Task<Facility> Update(Facility f)
         {
             const string sql = @"
                 UPDATE dbo.facility
@@ -86,7 +87,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     FACILITY_DHB_NAME = @DhbName
                 WHERE FACILITY_KEY = @Id";
 
-            return await ExecuteAsync(sql, f);
+            await ExecuteAsync(sql, f);
+            return await GetById(f.Id);
         }
 
 

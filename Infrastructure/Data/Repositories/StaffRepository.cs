@@ -38,18 +38,19 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Staff s)
+        public async Task<Staff> Create(Staff s)
         {
             const string sql = @"
                 INSERT INTO dbo.staff (STAFF_ID, STAFF_NAME, STAFF_EMAIL, STAFF_SPECIALTY_KEY)
                 OUTPUT INSERTED.STAFF_KEY
                 VALUES (@StaffId, @Name, @Email, @SpecialtyId)";
 
-            return await ExecuteScalarAsync<int>(sql, s);
+            var id = await ExecuteScalarAsync<int>(sql, s);
+            return await GetById(id);
         }
 
 
-        public async Task<int> Update(Staff s)
+        public async Task<Staff> Update(Staff s)
         {
             const string sql = @"
                 UPDATE dbo.staff
@@ -60,7 +61,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     STAFF_SPECIALTY_KEY = @SpecialtyId
                 WHERE STAFF_KEY = @Id";
 
-            return await ExecuteAsync(sql, s);
+            await ExecuteAsync(sql, s);
+            return await GetById(s.Id);
         }
 
 

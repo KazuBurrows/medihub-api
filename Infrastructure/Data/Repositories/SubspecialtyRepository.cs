@@ -34,26 +34,28 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Subspecialty s)
+        public async Task<Subspecialty> Create(Subspecialty s)
         {
             const string sql = @"
-        INSERT INTO dbo.subspecialty (SUBSPECIALTY_NAME)
-        OUTPUT INSERTED.SUBSPECIALTY_KEY
-        VALUES (@Name)";
+                INSERT INTO dbo.subspecialty (SUBSPECIALTY_NAME)
+                OUTPUT INSERTED.SUBSPECIALTY_KEY
+                VALUES (@Name)";
 
-            return await ExecuteScalarAsync<int>(sql, s);
+            var id = await ExecuteScalarAsync<int>(sql, s);
+            return await GetById(id);
         }
 
 
 
-        public async Task<int> Update(Subspecialty s)
+        public async Task<Subspecialty> Update(Subspecialty s)
         {
             const string sql = @"
-        UPDATE dbo.subspecialty
-        SET SUBSPECIALTY_NAME = @Name
-        WHERE SUBSPECIALTY_KEY = @Id";
+                UPDATE dbo.subspecialty
+                SET SUBSPECIALTY_NAME = @Name
+                WHERE SUBSPECIALTY_KEY = @Id";
 
-            return await ExecuteAsync(sql, s);
+            await ExecuteAsync(sql, s);
+            return await GetById(s.Id);
         }
 
 

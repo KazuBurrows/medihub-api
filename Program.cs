@@ -80,4 +80,7 @@ builder.Services.AddScoped<ISurgeonTypeService, SurgeonTypeService>();
 builder.Services.AddScoped<IAnaestheticTypeRepository, AnaestheticTypeRepository>();
 builder.Services.AddScoped<IAnaestheticTypeService, AnaestheticTypeService>();
 
+builder.Services.AddScoped<IVersionRepository, VersionRepository>();
+builder.Services.AddScoped<IVersionService, VersionService>();
+
 builder.Build().Run();

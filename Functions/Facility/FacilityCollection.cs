@@ -47,9 +47,7 @@ public class FacilityCollection
 
             var created = await _facilityService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.Facility>(req, "Facility", created, ActionType.Created);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

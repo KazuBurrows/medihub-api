@@ -61,6 +61,12 @@ namespace MediHub.Domain.DTOs
         public string? FacilityName { get; set; }
 
 
+        [Column("INSTANCE_TEMPLATE_VERSION_KEY")]
+        public int? VersionId { get; set; }
+        public string? VersionName { get; set; } = "";
+        public string? VersionDescription { get; set; } = "";
+        public bool? VersionIsActive { get; set; } = false;
+
 
         [Column("INSTANCE_TEMPLATE_CYCLE_WEEK")]
         public int? CycleWeek { get; set; }

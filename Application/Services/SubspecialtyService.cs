@@ -13,7 +13,7 @@ namespace MediHub.Application.Services
             _repository = repository;
         }
 
-        public Task<int> Create(Subspecialty s)
+        public Task<Subspecialty> Create(Subspecialty s)
         {
             return _repository.Create(s);
         }
@@ -23,7 +23,7 @@ namespace MediHub.Application.Services
             await _repository.Delete(id);
         }
 
-        public Task<int> Update(Subspecialty s)
+        public Task<Subspecialty> Update(Subspecialty s)
         {
             return _repository.Update(s);
         }

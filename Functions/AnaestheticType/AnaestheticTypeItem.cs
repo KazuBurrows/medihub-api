@@ -81,9 +81,8 @@ public class AnaestheticTypeItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+
+            return await ApiResponseFactory.Success<Domain.Models.AnaestheticType>(req, "Anaesthetic Type", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

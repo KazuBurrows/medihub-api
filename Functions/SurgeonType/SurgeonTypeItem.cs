@@ -81,9 +81,7 @@ public class SurgeonTypeItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+            return await ApiResponseFactory.Success<Domain.Models.SurgeonType>(req, "Surgeon Type", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

@@ -21,106 +21,6 @@ namespace MediHub.Infrastructure.Data.Repositories
             _logger = logger;
         }
 
-        public async Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(
-            int week,
-            int? facilityId,
-            int? assetId)
-        {
-            const string sql = @"
-                SELECT
-                    it.INSTANCE_TEMPLATE_KEY AS Id,
-
-                    -- Facility
-                    f.FACILITY_KEY AS FacilityId,
-                    f.FACILITY_NAME AS FacilityName,
-
-                    -- Asset
-                    a.ASSET_KEY AS AssetId,
-                    a.ASSET_CODE AS AssetName,
-
-                    -- Session
-                    s.SESSION_TITLE AS SessionName,
-                    s.SESSION_IS_PAEDIATRIC AS IsPediatric,
-                    s.SESSION_IS_ACUTE AS IsAcute,
-                    s.SESSION_ANAESTHETIC_TYPE_KEY AS AnaestheticTypeId,
-                    at.ANAESTHETIC_TYPE_CODE AS AnaestheticTypeCode,
-                    at.ANAESTHETIC_TYPE_DESCRIPTION AS AnaestheticTypeDescription,
-
-                    -- Surgeon
-                    st.STAFF_NAME AS SurgeonName,
-
-                    -- Schedule
-                    it.INSTANCE_TEMPLATE_CYCLE_WEEK AS Week,
-                    it.INSTANCE_TEMPLATE_CYCLE_DAY AS DayOfWeek,
-                    it.INSTANCE_TEMPLATE_START_TIME AS StartTime,
-                    it.INSTANCE_TEMPLATE_END_TIME AS EndTime,
-                    it.INSTANCE_TEMPLATE_IS_OPEN AS IsOpen
-
-                FROM dbo.instance_template it
-
-                INNER JOIN dbo.session s
-                    ON it.INSTANCE_TEMPLATE_SESSION_KEY = s.SESSION_KEY
-
-                INNER JOIN dbo.asset a
-                    ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
-
-                INNER JOIN dbo.facility f
-                    ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
-
-                LEFT JOIN dbo.staff st
-                    ON s.SESSION_SURGEON_KEY = st.STAFF_KEY
-
-                LEFT JOIN dbo.anaesthetic_type at
-                    ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
-
-                WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
-                /**FACILITY_FILTER**/
-                /**ASSET_FILTER**/
-
-                ORDER BY
-                    it.INSTANCE_TEMPLATE_CYCLE_DAY,
-                    it.INSTANCE_TEMPLATE_START_TIME;
-            ";
-
-            var parameters = new Dictionary<string, object>
-            {
-                ["Week"] = week
-            };
-
-            var dynamicSql = sql;
-
-            if (facilityId.HasValue)
-            {
-                dynamicSql = dynamicSql.Replace(
-                    "/**FACILITY_FILTER**/",
-                    "AND f.FACILITY_KEY = @FacilityId");
-
-                parameters["FacilityId"] = facilityId.Value;
-            }
-            else
-            {
-                dynamicSql = dynamicSql.Replace("/**FACILITY_FILTER**/", "");
-            }
-
-            if (assetId.HasValue)
-            {
-                dynamicSql = dynamicSql.Replace(
-                    "/**ASSET_FILTER**/",
-                    "AND a.ASSET_KEY = @AssetId");
-
-                parameters["AssetId"] = assetId.Value;
-            }
-            else
-            {
-                dynamicSql = dynamicSql.Replace("/**ASSET_FILTER**/", "");
-            }
-
-            return (await QueryAsync<TemplateScheduleDTO>(
-                dynamicSql,
-                parameters)).ToList();
-        }
-
-
 
         public async Task<TemplateMatrixFormatAgg> GetMatrixFormat(int facilityId)
         {
@@ -175,7 +75,8 @@ namespace MediHub.Infrastructure.Data.Repositories
             TimeSpan startTime,
             TimeSpan endTime,
             bool isOpen,
-            bool force)
+            bool force,
+            int versionId)
         {
             var conflicts = await QueryAsync<TemplateDTO>(
                 @"
@@ -185,14 +86,16 @@ namespace MediHub.Infrastructure.Data.Repositories
                     t.INSTANCE_TEMPLATE_CYCLE_WEEK AS CycleWeek,
                     t.INSTANCE_TEMPLATE_CYCLE_DAY AS CycleDay,
                     t.INSTANCE_TEMPLATE_START_TIME AS StartTime,
-                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime
+                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime,
+                    t.INSTANCE_TEMPLATE_VERSION_KEY AS VersionId
                 FROM dbo.fnCheckInstanceTemplateConflict(
                     @AssetKey,
                     @CycleWeek,
                     @CycleDay,
                     @StartTime,
                     @EndTime,
-                    @IgnoreKey
+                    @IgnoreKey,
+                    @VersionId
                 ) t",
                 new {
                     AssetKey = assetId,
@@ -200,7 +103,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     CycleDay = dayOfWeek,
                     StartTime = startTime,
                     EndTime = endTime,
-                    IgnoreKey = (int?)null
+                    IgnoreKey = (int?)null,
+                    VersionId = versionId
                 }
             );
 
@@ -222,7 +126,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_TEMPLATE_CYCLE_DAY,
                     INSTANCE_TEMPLATE_START_TIME,
                     INSTANCE_TEMPLATE_END_TIME,
-                    INSTANCE_TEMPLATE_IS_OPEN
+                    INSTANCE_TEMPLATE_IS_OPEN,
+                    INSTANCE_TEMPLATE_VERSION_KEY
                 )
                 VALUES
                 (
@@ -232,7 +137,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @DayOfWeek,
                     @StartTime,
                     @EndTime,
-                    @IsOpen
+                    @IsOpen,
+                    @VersionId
                 );
 
                 SELECT CAST(SCOPE_IDENTITY() AS INT);
@@ -246,7 +152,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 DayOfWeek = dayOfWeek,
                 StartTime = startTime,
                 EndTime = endTime,
-                IsOpen = isOpen
+                IsOpen = isOpen,
+                VersionId = versionId
             })).First();
 
             return await GetByIdDTO(newId);
@@ -263,25 +170,28 @@ namespace MediHub.Infrastructure.Data.Repositories
             TimeSpan startTime,
             TimeSpan endTime,
             bool isOpen,
-            bool force)
+            bool force,
+            int versionId)
         {
 
             var conflicts = await QueryAsync<TemplateDTO>(
                 @"
                 SELECT 
-                    t.INSTANCE_TEMPLATE_KEY AS Id,
-                    t.INSTANCE_TEMPLATE_ASSET_KEY AS AssetId,
-                    t.INSTANCE_TEMPLATE_CYCLE_WEEK AS CycleWeek,
-                    t.INSTANCE_TEMPLATE_CYCLE_DAY AS CycleDay,
-                    t.INSTANCE_TEMPLATE_START_TIME AS StartTime,
-                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime
+                    t.INSTANCE_TEMPLATE_KEY             AS Id,
+                    t.INSTANCE_TEMPLATE_ASSET_KEY       AS AssetId,
+                    t.INSTANCE_TEMPLATE_CYCLE_WEEK      AS CycleWeek,
+                    t.INSTANCE_TEMPLATE_CYCLE_DAY       AS CycleDay,
+                    t.INSTANCE_TEMPLATE_START_TIME      AS StartTime,
+                    t.INSTANCE_TEMPLATE_END_TIME        AS EndTime,
+                    t.INSTANCE_TEMPLATE_VERSION_KEY     AS VersionId
                 FROM dbo.fnCheckInstanceTemplateConflict(
                     @AssetKey,
                     @CycleWeek,
                     @CycleDay,
                     @StartTime,
                     @EndTime,
-                    @IgnoreKey
+                    @IgnoreKey,
+                    @VersionId
                 ) t",
                 new {
                     AssetKey = assetId,
@@ -289,7 +199,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     CycleDay = dayOfWeek,
                     StartTime = startTime,
                     EndTime = endTime,
-                    IgnoreKey = id
+                    IgnoreKey = id,
+                    VersionId = versionId
                 }
             );
 
@@ -314,7 +225,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_TEMPLATE_START_TIME = @StartTime,
                     INSTANCE_TEMPLATE_END_TIME = @EndTime,
                     INSTANCE_TEMPLATE_IS_OPEN = @IsOpen,
-                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME = SYSUTCDATETIME()
+                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME = SYSUTCDATETIME(),
+                    INSTANCE_TEMPLATE_VERSION_KEY = @VersionId
                 WHERE INSTANCE_TEMPLATE_KEY = @Id;
 
                 IF @@ROWCOUNT = 0
@@ -336,7 +248,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 DayOfWeek = dayOfWeek,
                 StartTime = startTime,
                 EndTime = endTime,
-                IsOpen = isOpen
+                IsOpen = isOpen,
+                VersionId = versionId
             };
 
             await ExecuteAsync(sql, parameters);
@@ -368,8 +281,8 @@ namespace MediHub.Infrastructure.Data.Repositories
 
             const string sqlTemplate = @"
                 INSERT INTO dbo.instance 
-                    (INSTANCE_ASSET_KEY, INSTANCE_SESSION_KEY, INSTANCE_START_DATETIME, INSTANCE_END_DATETIME, INSTANCE_TEMPLATE_IS_OPEN)
-                VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime, @IsOpen);
+                    (INSTANCE_ASSET_KEY, INSTANCE_SESSION_KEY, INSTANCE_START_DATETIME, INSTANCE_END_DATETIME, INSTANCE_TEMPLATE_IS_OPEN, INSTANCE_TEMPLATE_VERSION_KEY)
+                VALUES (@AssetId, @SessionId, @StartDateTime, @EndDateTime, @IsOpen, @VersionId);
             ";
 
             try
@@ -380,14 +293,15 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     var templates = (await QueryAsync<Template>(@"
                         SELECT 
-                            INSTANCE_TEMPLATE_KEY         AS Id,
-                            INSTANCE_TEMPLATE_SESSION_KEY AS SessionId,
-                            INSTANCE_TEMPLATE_ASSET_KEY   AS AssetId,
-                            INSTANCE_TEMPLATE_CYCLE_WEEK  AS CycleWeek,
-                            INSTANCE_TEMPLATE_CYCLE_DAY   AS CycleDay,
-                            INSTANCE_TEMPLATE_START_TIME  AS StartTime,
-                            INSTANCE_TEMPLATE_END_TIME    AS EndTime,
-                            INSTANCE_TEMPLATE_IS_OPEN     AS IsOpen
+                            INSTANCE_TEMPLATE_KEY           AS Id,
+                            INSTANCE_TEMPLATE_SESSION_KEY   AS SessionId,
+                            INSTANCE_TEMPLATE_ASSET_KEY     AS AssetId,
+                            INSTANCE_TEMPLATE_CYCLE_WEEK    AS CycleWeek,
+                            INSTANCE_TEMPLATE_CYCLE_DAY     AS CycleDay,
+                            INSTANCE_TEMPLATE_START_TIME    AS StartTime,
+                            INSTANCE_TEMPLATE_END_TIME      AS EndTime,
+                            INSTANCE_TEMPLATE_IS_OPEN       AS IsOpen,
+                            INSTANCE_TEMPLATE_VERSION_KEY   AS VersionId
                         FROM dbo.instance_template
                         WHERE INSTANCE_TEMPLATE_CYCLE_WEEK = @CycleWeek
                         AND INSTANCE_TEMPLATE_IS_OPEN = 1
@@ -424,7 +338,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                             AssetId = t.AssetId,
                             StartDateTime = startDateTime,
                             EndDateTime = endDateTime,
-                            IsOpen = t.IsOpen
+                            IsOpen = t.IsOpen,
+                            VersionId = t.VersionId
                         });
                     }
 
@@ -454,6 +369,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     it.INSTANCE_TEMPLATE_END_TIME     AS EndTime,
                     it.INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    it.INSTANCE_TEMPLATE_VERSION_KEY AS VersionId,
 
                     -- Asset columns
                     a.ASSET_CODE                      AS AssetCode,
@@ -475,6 +391,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
 
+                    v.VERSION_NAME                  AS VersionName,
+                    v.VERSION_DESCRIPTION           AS VersionDescription,
+                    v.VERSION_IS_ACTIVE             AS VersionIsActive,
+
                     -- Surgeon columns (staff)
                     s.STAFF_NAME AS SurgeonName,
 
@@ -490,14 +410,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                     stf.STAFF_NAME                     AS LastUpdatedByUserName
 
                 FROM dbo.instance_template it
-                LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
-                LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
-                LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
-                LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
-                LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
-                LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
-                LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
-                LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
+                    LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                    LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                    LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
+                    LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
+                    LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+                    LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
+                    LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                    LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
+                    LEFT JOIN dbo.version v ON it.INSTANCE_TEMPLATE_VERSION_KEY = v.VERSION_KEY
                 ORDER BY it.INSTANCE_TEMPLATE_KEY;
             ";
 
@@ -505,7 +426,7 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week)
+        public async Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week, int versionId)
         {
             const string sql = @"
                 SELECT
@@ -520,6 +441,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     it.INSTANCE_TEMPLATE_END_TIME     AS EndTime,
                     it.INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    it.INSTANCE_TEMPLATE_VERSION_KEY AS VersionId,
 
                     -- Asset columns
                     a.ASSET_CODE                      AS AssetCode,
@@ -541,6 +463,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
 
+                    v.VERSION_NAME                  AS VersionName,
+                    v.VERSION_DESCRIPTION           AS VersionDescription,
+                    v.VERSION_IS_ACTIVE             AS VersionIsActive,
+
                     -- Surgeon columns (staff)
                     s.STAFF_NAME AS SurgeonName,
 
@@ -556,19 +482,21 @@ namespace MediHub.Infrastructure.Data.Repositories
                     stf.STAFF_NAME                     AS LastUpdatedByUserName
 
                 FROM dbo.instance_template it
-                LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
-                LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
-                LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
-                LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
-                LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
-                LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
-                LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
-                LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
+                    LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                    LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                    LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
+                    LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
+                    LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+                    LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
+                    LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                    LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
+                    LEFT JOIN dbo.version v ON it.INSTANCE_TEMPLATE_VERSION_KEY = v.VERSION_KEY
                 WHERE it.INSTANCE_TEMPLATE_CYCLE_WEEK = @Week
+                AND it.INSTANCE_TEMPLATE_VERSION_KEY = @VersionId
                 ORDER BY it.INSTANCE_TEMPLATE_KEY;
             ";
 
-            return await QueryAsync<TemplateDTO>(sql, new { Week = week });
+            return await QueryAsync<TemplateDTO>(sql, new { Week = week, VersionId = versionId });
         }
 
         public async Task<Template?> GetById(int id)
@@ -576,15 +504,16 @@ namespace MediHub.Infrastructure.Data.Repositories
             const string sql = @"
                 SELECT
                     INSTANCE_TEMPLATE_KEY       AS Id,
-                    INSTANCE_TEMPLATE_SESSION_KEY AS SessionId,
-                    INSTANCE_TEMPLATE_ASSET_KEY   AS AssetId,
-                    INSTANCE_TEMPLATE_CYCLE_WEEK  AS CycleWeek,
-                    INSTANCE_TEMPLATE_CYCLE_DAY   AS CycleDay,
-                    INSTANCE_TEMPLATE_IS_OPEN     AS IsOpen,
-                    INSTANCE_TEMPLATE_START_TIME  AS StartTime,
-                    INSTANCE_TEMPLATE_END_TIME    AS EndTime,
-                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
-                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId
+                    INSTANCE_TEMPLATE_SESSION_KEY                   AS SessionId,
+                    INSTANCE_TEMPLATE_ASSET_KEY                     AS AssetId,
+                    INSTANCE_TEMPLATE_CYCLE_WEEK                    AS CycleWeek,
+                    INSTANCE_TEMPLATE_CYCLE_DAY                     AS CycleDay,
+                    INSTANCE_TEMPLATE_IS_OPEN                       AS IsOpen,
+                    INSTANCE_TEMPLATE_START_TIME                    AS StartTime,
+                    INSTANCE_TEMPLATE_END_TIME                      AS EndTime,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME         AS LastUpdatedDatetime,
+                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY         AS LastUpdatedByUserId,
+                    INSTANCE_TEMPLATE_VERSION_KEY                   AS VersionId
                 FROM dbo.instance_template
                 WHERE INSTANCE_TEMPLATE_KEY = @Id;
             ";
@@ -607,6 +536,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     it.INSTANCE_TEMPLATE_END_TIME     AS EndTime,
                     it.INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    it.INSTANCE_TEMPLATE_VERSION_KEY AS VersionId,
 
                     -- Asset columns
                     a.ASSET_CODE                      AS AssetCode,
@@ -628,6 +558,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     se.SESSION_SPECIALTY_KEY           AS SpecialtyId,
                     se.SESSION_SUBSPECIALTY_KEY        AS SubspecialtyId,
 
+                    v.VERSION_NAME                  AS VersionName,
+                    v.VERSION_DESCRIPTION           AS VersionDescription,
+                    v.VERSION_IS_ACTIVE             AS VersionIsActive,
+
                     -- Surgeon columns (staff)
                     s.STAFF_NAME AS SurgeonName,
 
@@ -643,14 +577,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                     stf.STAFF_NAME                     AS LastUpdatedByUserName
 
                 FROM dbo.instance_template it
-                LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
-                LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
-                LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
-                LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
-                LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
-                LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
-                LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
-                LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
+                    LEFT JOIN dbo.asset a ON it.INSTANCE_TEMPLATE_ASSET_KEY = a.ASSET_KEY
+                    LEFT JOIN dbo.facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                    LEFT JOIN dbo.session se ON it.INSTANCE_TEMPLATE_SESSION_KEY = se.SESSION_KEY
+                    LEFT JOIN dbo.staff s ON se.SESSION_SURGEON_KEY = s.STAFF_KEY
+                    LEFT JOIN dbo.specialty sp ON se.SESSION_SPECIALTY_KEY = sp.SPECIALTY_KEY
+                    LEFT JOIN dbo.subspecialty ss ON se.SESSION_SUBSPECIALTY_KEY = ss.SUBSPECIALTY_KEY
+                    LEFT JOIN dbo.staff stf ON it.INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = stf.STAFF_KEY
+                    LEFT JOIN dbo.anaesthetic_type at ON at.ANAESTHETIC_TYPE_KEY = se.SESSION_ANAESTHETIC_TYPE_KEY
+                    LEFT JOIN dbo.version v ON it.INSTANCE_TEMPLATE_VERSION_KEY = v.VERSION_KEY
                 WHERE it.INSTANCE_TEMPLATE_KEY = @Id;
             ";
 
@@ -672,7 +607,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_TEMPLATE_START_TIME = @StartTime,
                     INSTANCE_TEMPLATE_END_TIME = @EndTime,
                     INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME = GETDATE(),
-                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = @LastUpdatedByUserId
+                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY = @LastUpdatedByUserId,
+                    INSTANCE_TEMPLATE_VERSION_KEY = @VersionId
                 WHERE
                     INSTANCE_TEMPLATE_KEY = @Id;
             ";
@@ -690,14 +626,16 @@ namespace MediHub.Infrastructure.Data.Repositories
                     t.INSTANCE_TEMPLATE_CYCLE_WEEK AS CycleWeek,
                     t.INSTANCE_TEMPLATE_CYCLE_DAY AS CycleDay,
                     t.INSTANCE_TEMPLATE_START_TIME AS StartTime,
-                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime
+                    t.INSTANCE_TEMPLATE_END_TIME AS EndTime,
+                    t.INSTANCE_TEMPLATE_VERSION_KEY AS VersionId
                 FROM dbo.fnCheckInstanceTemplateConflict(
                     @AssetKey,
                     @CycleWeek,
                     @CycleDay,
                     @StartTime,
                     @EndTime,
-                    @IgnoreKey
+                    @IgnoreKey,
+                    @VersionId
                 ) t",
                 new {
                     AssetKey = t.AssetId,
@@ -705,7 +643,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     CycleDay = t.CycleDay,
                     StartTime = t.StartTime,
                     EndTime = t.EndTime,
-                    IgnoreKey = (int?)null  // must be nullable for inserts
+                    IgnoreKey = (int?)null,  // must be nullable for inserts
+                    VersionId = t.VersionId
                 }
             );
 
@@ -729,7 +668,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_TEMPLATE_START_TIME,
                     INSTANCE_TEMPLATE_END_TIME,
                     INSTANCE_TEMPLATE_LAST_UPDATED_DATETIME,
-                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY
+                    INSTANCE_TEMPLATE_LAST_UPDATED_USER_KEY,
+                    INSTANCE_TEMPLATE_VERSION_KEY
                 )
                 OUTPUT INSERTED.INSTANCE_TEMPLATE_KEY
                 VALUES
@@ -742,7 +682,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @StartTime,
                     @EndTime,
                     GETDATE(),
-                    @LastUpdatedByUserId
+                    @LastUpdatedByUserId,
+                    @VersionId
                 );
             ";
 
@@ -780,7 +721,8 @@ namespace MediHub.Infrastructure.Data.Repositories
             int week,
             int dayOfWeek,
             TimeSpan startTime,
-            TimeSpan endTime)
+            TimeSpan endTime,
+            int versionId)
         {
             const string sql = @"
                 SELECT INSTANCE_TEMPLATE_KEY
@@ -791,6 +733,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                 AND (@TemplateId IS NULL OR INSTANCE_TEMPLATE_KEY <> @TemplateId)
                 AND INSTANCE_TEMPLATE_START_TIME < @EndTime
                 AND INSTANCE_TEMPLATE_END_TIME > @StartTime
+                AND INSTANCE_TEMPLATE_VERSION_KEY = @VersionId
             ";
 
             var clashes = await QueryAsync<int>(sql, new
@@ -800,10 +743,87 @@ namespace MediHub.Infrastructure.Data.Repositories
                 Week = week,
                 DayOfWeek = dayOfWeek,
                 StartTime = startTime,
-                EndTime = endTime
+                EndTime = endTime,
+                VersionId = versionId
             });
 
             return clashes.ToList();
+        }
+
+
+        public async Task<MatrixLayout> GetMatrixLayout()
+        {
+            // 1️⃣ Fetch all unique locations
+            const string sqlLocations = @"
+                SELECT DISTINCT ASSET_LOCATION
+                FROM asset
+                ORDER BY ASSET_LOCATION
+            ";
+
+            var locations = (await QueryAsync<string>(sqlLocations)).ToList();
+
+            var groups = new List<MatrixNode>();
+
+            // 2️⃣ For each location, fetch its assets
+            const string sqlAssets = @"
+                SELECT 
+                    a.ASSET_KEY AS Id,
+                    a.ASSET_CODE AS Code,
+                    a.ASSET_DESCRIPTION AS Description,
+                    a.ASSET_TYPE_CODE AS TypeCode,
+                    a.ASSET_LOCATION AS Location,
+                    a.ASSET_FACILITY_KEY AS FacilityId,
+                    a.ASSET_DISTRICT_OF_SERVICE AS DistrictOfService,
+                    a.ASSET_PRIMARY_SPECIALTY_KEY AS PrimarySpecialtyId,
+                    f.FACILITY_KEY AS FacilityId, -- optional duplicate if you want facility info
+                    f.FACILITY_CODE AS FacilityCode,
+                    f.FACILITY_NAME AS FacilityName,
+                    f.FACILITY_TYPE_CODE AS FacilityTypeCode,
+                    f.FACILITY_TYPE_DESCRIPTION AS TypeDescription,
+                    f.FACILITY_DHB_CODE AS DhbCode,
+                    f.FACILITY_DHB_NAME AS DhbName
+                FROM asset a
+                LEFT JOIN facility f ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
+                WHERE a.ASSET_LOCATION = @Location
+                ORDER BY f.FACILITY_NAME, a.ASSET_DESCRIPTION
+            ";
+
+            foreach (var location in locations)
+            {
+                var assets = (await QueryAsync<AssetDTO>(sqlAssets, new { Location = location })).ToList();
+
+                var locationNode = new MatrixNode
+                {
+                    Id = location ?? "Unknown Location",
+                    Label = location ?? "Unknown Location",
+                    Type = "location",
+                    Children = assets
+                        .GroupBy(f => f.FacilityName ?? "Unknown Facility")
+                        .Select(facGroup => new MatrixNode
+                        {
+                            Id = facGroup.First().FacilityId?.ToString() ?? facGroup.Key,
+                            Label = facGroup.Key,
+                            Type = "facility",
+                            Children = facGroup
+                                .Select(asset => new MatrixNode
+                                {
+                                    Id = asset.Id.ToString(),
+                                    Label = asset.Description ?? asset.Code ?? "Unnamed Asset",
+                                    Type = "asset"
+                                })
+                                .ToList()
+                        })
+                        .ToList()
+                };
+
+                groups.Add(locationNode);
+            }
+
+            return new MatrixLayout
+            {
+                Grouping = new[] { "location", "facility", "asset" },
+                Groups = groups
+            };
         }
 
     }

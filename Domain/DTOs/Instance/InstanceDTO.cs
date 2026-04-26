@@ -49,6 +49,12 @@ namespace MediHub.Domain.DTOs
         public string? SubspecialtyName { get; set; }
         
 
+        [Column("INSTANCE_VERSION_KEY")]
+        public int? VersionId { get; set; }
+        public string? VersionName { get; set; } = "";
+        public string? VersionDescription { get; set; } = "";
+        public bool? VersionIsActive { get; set; } = false;
+
 
         [Column("INSTANCE_ASSET_KEY")]
         public int? AssetId { get; set; }

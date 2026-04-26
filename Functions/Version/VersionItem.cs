@@ -6,48 +6,48 @@ using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 
-namespace MediHub.Functions.Subspecialty;
+namespace MediHub.Functions.Version;
 
-public class SubspecialtyItem
+public class VersionItem
 {
-    private readonly ISubspecialtyService _subspecialtyService;
+    private readonly IVersionService _versionService;
 
-    public SubspecialtyItem(ISubspecialtyService subspecialtyService)
+    public VersionItem(IVersionService versionService)
     {
-        _subspecialtyService = subspecialtyService;
+        _versionService = versionService;
     }
 
-    [Function("SubspecialtyItem")]
+    [Function("VersionItem")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "delete", "put", "options",
-            Route = "subspecialty/{id}")] HttpRequestData req,
+            Route = "version/{id}")] HttpRequestData req,
         int id,
         FunctionContext context)
     {
-         var log = context.GetLogger("SubspecialtyItem");
+         var log = context.GetLogger("VersionItem");
 
-        // GET /subspecialty/{id}
+        // GET /version/{id}
         if (req.Method == "GET")
         {
-            var subspecialty = await _subspecialtyService.GetById(id);
+            var version = await _versionService.GetById(id);
 
-            if (subspecialty == null)
+            if (version == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(subspecialty);
+            await ok.WriteAsJsonAsync(version);
             return ok;
         }
 
-        // DELETE /subspecialty/{id}
+        // DELETE /version/{id}
         if (req.Method == "DELETE")
         {
             try
             {
-                await _subspecialtyService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Subspecialty", id, ActionType.Deleted);
+                await _versionService.Delete(id);
+                return await ApiResponseFactory.Success(req, "Version", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
@@ -55,10 +55,10 @@ public class SubspecialtyItem
             }
         }
 
-        // PUT /subspecialty/{id}
+        // PUT /version/{id}
         if (req.Method == "PUT")
         {
-            var (data, errorResponse) = await req.ReadJsonBodyAsync<Domain.Models.Subspecialty>();
+            var (data, errorResponse) = await req.ReadJsonBodyAsync<Domain.Models.Version>();
 
             if (errorResponse != null)
                 return errorResponse;
@@ -76,12 +76,12 @@ public class SubspecialtyItem
             // Force route ID to be authoritative
             data.Id = id;
 
-            var updated = await _subspecialtyService.Update(data);
+            var updated = await _versionService.Update(data);
 
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            return await ApiResponseFactory.Success<Domain.Models.Subspecialty>(req, "Subspecialty", updated, ActionType.Updated);
+            return await ApiResponseFactory.Success<Domain.Models.Version>(req, "Version", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

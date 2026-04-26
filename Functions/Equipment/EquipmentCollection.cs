@@ -48,9 +48,7 @@ public class EquipmentCollection
 
             var created = await _equipmentService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.Equipment>(req, "Equipment", created, ActionType.Created);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

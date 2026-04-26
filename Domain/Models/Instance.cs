@@ -27,5 +27,8 @@ namespace MediHub.Domain.Models
 
         [Column("INSTANCE_SESSION_OVERRIDE_KEY")]
         public int? SessionOverrideId { get; set; }
+
+        [Column("INSTANCE_VERSION_KEY")]
+        public int? VersionId { get; set; }
     }
 }

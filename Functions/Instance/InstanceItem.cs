@@ -5,6 +5,7 @@ using MediHub.Common.Exceptions.Infrastructure;
 using MediHub.Functions.Helpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Logging;
 
 namespace MediHub.Functions.Instance;
 
@@ -64,6 +65,7 @@ public class InstanceItem
 
             try
             {
+                log.LogInformation("Updating instance with ID {input}", input.VersionId);
                 input.Id = id;
                 var instance = await _instanceService.Update(input);
                 return await ApiResponseFactory.Success<Domain.Models.Instance>(req, "Instance", instance, ActionType.Updated);

@@ -1,21 +1,22 @@
 using MediHub.Application.Interfaces;
 using MediHub.Domain.Models;
 using MediHub.Infrastructure.Data.Interfaces;
+using Version = MediHub.Domain.Models.Version;
 
 namespace MediHub.Application.Services
 {
-    public class EquipmentService : IEquipmentService
+    public class VersionService : IVersionService
     {
-        private readonly IEquipmentRepository _repository;
+        private readonly IVersionRepository _repository;
 
-        public EquipmentService(IEquipmentRepository repository)
+        public VersionService(IVersionRepository repository)
         {
             _repository = repository;
         }
 
-        public Task<Equipment> Create(Equipment e)
+        public Task<Version> Create(Version v)
         {
-            return _repository.Create(e);
+            return _repository.Create(v);
         }
 
         public async Task Delete(int id)
@@ -23,21 +24,20 @@ namespace MediHub.Application.Services
             await _repository.Delete(id);
         }
 
-        public Task<Equipment> Update(Equipment e)
+        public Task<Version> Update(Version v)
         {
-            return _repository.Update(e);
+            return _repository.Update(v);
         }
 
-        public async Task<IEnumerable<Equipment>> GetAll()
+        public async Task<IEnumerable<Version>> GetAll()
         {
             return await _repository.GetAll();
         }
 
-        public async Task<Equipment> GetById(int id)
+        public async Task<Version> GetById(int id)
         {
             return await _repository.GetById(id);
         }
-        
     }
 }
 

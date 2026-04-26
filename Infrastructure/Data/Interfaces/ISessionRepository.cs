@@ -5,9 +5,9 @@ namespace MediHub.Infrastructure.Data.Interfaces
 {
     public interface ISessionRepository
     {
-        Task<int> Create(Session s);
+        Task<Session> Create(Session s);
         Task Delete(int id);
-        Task<int> Update(Session s);
+        Task<Session> Update(Session s);
         Task<IEnumerable<Session>> GetAll();
         Task<IEnumerable<SessionDTO>> GetAllDTO();
         Task<Session> GetById(int id);

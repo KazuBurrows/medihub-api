@@ -45,9 +45,8 @@ public class SpecialtyCollection
 
             var created = await _specialtyService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.Specialty>(req, "Specialty", created, ActionType.Created);
+
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

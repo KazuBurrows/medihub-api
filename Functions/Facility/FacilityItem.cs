@@ -47,34 +47,11 @@ public class FacilityItem
             try
             {
                 await _facilityService.Delete(id);
-
-                var success = new ApiResponse
-                {
-                    Title = "Successfully Deleted",
-                    Status = 202,
-                    Detail = $"Item with id {id} was successfully deleted.",
-                    Extensions = new Dictionary<string, object>
-                    {
-                        { "deletedId", id }
-                    }
-                };
-                var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteAsJsonAsync(success);
-
-                return response;
+                return await ApiResponseFactory.Success(req, "Facility", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
-                var error = new ApiResponse
-                {
-                    Title = "Not Found",
-                    Status = 404,
-                    Detail = ex.Message
-                };
-
-                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFoundResponse.WriteAsJsonAsync(error);
-                return notFoundResponse;
+                return await ApiResponseFactory.NotFound(req, ex.Message);
             }
         }
 
@@ -104,9 +81,7 @@ public class FacilityItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+                return await ApiResponseFactory.Success<Domain.Models.Facility>(req, "Facility", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

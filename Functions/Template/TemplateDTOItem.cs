@@ -61,7 +61,8 @@ public class TemplateDTOItem
                     input.StartTime,
                     input.EndTime,
                     input.IsOpen,
-                    input.Force
+                    input.Force,
+                    input.VersionId
                 );
                 return await ApiResponseFactory.Success<TemplateDTO>(req, "Template", template, ActionType.Updated);
             }

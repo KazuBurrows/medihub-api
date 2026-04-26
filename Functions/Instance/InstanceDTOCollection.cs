@@ -62,7 +62,7 @@ public class InstanceDTOCollection
             try
             {
                 var instance = await _instanceService.CreateDTO(input);
-                return await ApiResponseFactory.Success<Domain.DTOs.InstanceDTO>(req, "Instance", instance, ActionType.Updated);
+                return await ApiResponseFactory.Success<Domain.DTOs.InstanceDTO>(req, "Instance", instance, ActionType.Created);
             }
             catch (ConflictException ex)
             {

@@ -4,11 +4,11 @@ using Microsoft.Azure.Functions.Worker.Http;
 public static class ApiResponseFactory
 {
     private static async Task<HttpResponseData> Create(
-        HttpRequestData req,
-        HttpStatusCode status,
-        string title,
-        string detail,
-        Dictionary<string, object>? extensions = null)
+    HttpRequestData req,
+    HttpStatusCode status,
+    string title,
+    string detail,
+    Dictionary<string, object>? extensions = null)
     {
         var response = req.CreateResponse(status);
 
@@ -49,9 +49,16 @@ public static class ApiResponseFactory
     {
         string actionStr = action.ToString().ToLower();
 
+        var statusCode = action switch
+        {
+            ActionType.Created => HttpStatusCode.Created,
+            ActionType.Deleted => HttpStatusCode.OK,  // ← was NoContent
+            _                  => HttpStatusCode.OK
+        };
+
         return Create(
             req,
-            HttpStatusCode.OK,
+            statusCode,
             $"Successfully {char.ToUpper(actionStr[0]) + actionStr[1..]}",
             $"{entity} with id {id} was successfully {actionStr}.",
             new Dictionary<string, object> { { "id", id } }
@@ -66,15 +73,19 @@ public static class ApiResponseFactory
     {
         string actionStr = action.ToString().ToLower();
 
+        var statusCode = action switch
+        {
+            ActionType.Created => HttpStatusCode.Created,
+            ActionType.Deleted => HttpStatusCode.OK,  // ← was NoContent
+            _                  => HttpStatusCode.OK
+        };
+
         return Create(
             req,
-            HttpStatusCode.OK,
+            statusCode,
             $"Successfully {char.ToUpper(actionStr[0]) + actionStr[1..]}",
             $"{entity} was successfully {actionStr}.",
-            new Dictionary<string, object>
-            {
-                { "item", item } // Send the whole item back
-            }
+            new Dictionary<string, object> { { "item", item } }
         );
     }
 

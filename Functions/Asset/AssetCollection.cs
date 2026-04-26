@@ -47,9 +47,8 @@ public class AssetCollection
 
             var created = await _assetService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.Asset>(req, "Asset", created, ActionType.Created);
+
         }
         
 

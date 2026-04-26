@@ -38,19 +38,20 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Specialty s)
+        public async Task<Specialty> Create(Specialty s)
         {
             const string sql = @"
                 INSERT INTO dbo.specialty (SPECIALTY_CODE, SPECIALTY_DESCRIPTION, SPECIALTY_IS_VISIBLE)
                 OUTPUT INSERTED.SPECIALTY_KEY
                 VALUES (@Code, @Description, @IsVisible)";
 
-            return await ExecuteScalarAsync<int>(sql, s);
+            var id = await ExecuteScalarAsync<int>(sql, s);
+            return await GetById(id);
         }
 
 
 
-        public async Task<int> Update(Specialty s)
+        public async Task<Specialty> Update(Specialty s)
         {
             const string sql = @"
                 UPDATE dbo.specialty
@@ -60,7 +61,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     SPECIALTY_IS_VISIBLE = @IsVisible
                 WHERE SPECIALTY_KEY = @Id";
 
-            return await ExecuteAsync(sql, s);
+            await ExecuteAsync(sql, s);
+            return await GetById(s.Id);
         }
 
 

@@ -47,9 +47,7 @@ public class AnaestheticTypeCollection
 
             var created = await _anaestheticTypeService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.AnaestheticType>(req, "Anaesthetic Type", created, ActionType.Created);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

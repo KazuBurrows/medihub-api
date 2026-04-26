@@ -54,6 +54,13 @@ namespace MediHub.Domain.Matrix
         public string? AssetDescription { get; set; } = "";
 
 
+        [Column("INSTANCE_VERSION_KEY")]
+        public int? VersionId { get; set; }
+        public string? VersionName { get; set; } = "";
+        public string? VersionDescription { get; set; } = "";
+        public bool? VersionIsActive { get; set; } = false;
+
+
         [Column("SESSION_KEY")]
         public int? SessionId { get; set; }
 

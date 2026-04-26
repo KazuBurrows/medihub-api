@@ -37,26 +37,28 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Equipment e)
+        public async Task<Equipment> Create(Equipment e)
         {
             const string sql = @"
                 INSERT INTO dbo.equipment (EQUIPMENT_NAME)
                 OUTPUT INSERTED.EQUIPMENT_KEY
                 VALUES (@Name)";
 
-            return await ExecuteScalarAsync<int>(sql, e);
+            var id = await ExecuteScalarAsync<int>(sql, e);
+            return await GetById(id);
         }
 
 
 
-        public async Task<int> Update(Equipment e)
+        public async Task<Equipment> Update(Equipment e)
         {
             const string sql = @"
                 UPDATE dbo.equipment
                 SET EQUIPMENT_NAME = @Name
                 WHERE EQUIPMENT_KEY = @Id";
 
-            return await ExecuteAsync(sql, e);
+            await ExecuteAsync(sql, e);
+            return await GetById(e.Id);
         }
 
 

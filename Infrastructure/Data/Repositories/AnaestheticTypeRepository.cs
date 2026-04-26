@@ -36,26 +36,29 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(AnaestheticType s)
+        public async Task<AnaestheticType> Create(AnaestheticType s)
         {
             const string sql = @"
                 INSERT INTO dbo.anaesthetic_type (ANAESTHETIC_TYPE_CODE, ANAESTHETIC_TYPE_DESCRIPTION)
                 OUTPUT INSERTED.ANAESTHETIC_TYPE_KEY
                 VALUES (@Code, @Description)";
 
-            return await ExecuteScalarAsync<int>(sql, s);
+            var id = await ExecuteScalarAsync<int>(sql, s);
+
+            return await GetById(id);
         }
 
 
 
-        public async Task<int> Update(AnaestheticType s)
+        public async Task<AnaestheticType> Update(AnaestheticType s)
         {
             const string sql = @"
                 UPDATE dbo.anaesthetic_type
                 SET ANAESTHETIC_TYPE_CODE = @Code, ANAESTHETIC_TYPE_DESCRIPTION = @Description
                 WHERE ANAESTHETIC_TYPE_KEY = @Id";
 
-            return await ExecuteAsync(sql, s);
+            await ExecuteAsync(sql, s);
+            return await GetById(s.Id);
         }
 
 

@@ -4,9 +4,9 @@ namespace MediHub.Application.Interfaces
 {
     public interface ISurgeonTypeService
     {
-        Task<int> Create(SurgeonType s);
+        Task<SurgeonType> Create(SurgeonType s);
         Task Delete(int id);
-        Task<int> Update(SurgeonType s);
+        Task<SurgeonType> Update(SurgeonType s);
         Task<IEnumerable<SurgeonType>> GetAll();
         Task<SurgeonType> GetById(int id);
     }

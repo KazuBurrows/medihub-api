@@ -47,7 +47,7 @@ public class SessionItem
             try
             {
                 await _sessionService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+                return await ApiResponseFactory.Success(req, "Session", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
@@ -81,9 +81,7 @@ public class SessionItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+            return await ApiResponseFactory.Success<Domain.Models.Session>(req, "Session", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

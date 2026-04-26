@@ -47,7 +47,7 @@ public class RoleItem
             try
             {
                 await _roleService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+                return await ApiResponseFactory.Success(req, "Role", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
@@ -81,9 +81,7 @@ public class RoleItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+            return await ApiResponseFactory.Success<Domain.Models.Role>(req, "Role", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

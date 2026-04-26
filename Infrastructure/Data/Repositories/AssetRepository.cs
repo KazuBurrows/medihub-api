@@ -52,7 +52,7 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Asset t)
+        public async Task<Asset> Create(Asset t)
         {
             const string sql = @"
                 INSERT INTO dbo.asset (
@@ -77,13 +77,14 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @Paediatric,
                     @DedicatedAcute)";
 
-            return await ExecuteAsync(sql, t);
+            var id = await ExecuteAsync(sql, t);
+            return await GetById(id);
         }
 
 
 
 
-        public async Task<int> Update(Asset t)
+        public async Task<Asset> Update(Asset t)
         {
             const string sql = @"
                 UPDATE dbo.asset
@@ -99,7 +100,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     ASSET_DEDICATED_ACUTE = @DedicatedAcute
                 WHERE ASSET_KEY = @Id";
 
-            return await ExecuteAsync(sql, t);
+            await ExecuteAsync(sql, t);
+            return await GetById(t.Id);
         }
 
 

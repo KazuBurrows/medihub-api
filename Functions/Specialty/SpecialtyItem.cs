@@ -45,7 +45,7 @@ public class SpecialtyItem
             try
             {
                 await _specialtyService.Delete(id);
-                return await ApiResponseFactory.Success(req, "Instance", id, ActionType.Deleted);
+                return await ApiResponseFactory.Success(req, "Specialty", id, ActionType.Deleted);
             }
             catch (NotFoundException ex)
             {
@@ -78,9 +78,7 @@ public class SpecialtyItem
             if (updated == null)
                 return req.CreateResponse(HttpStatusCode.NotFound);
 
-            var ok = req.CreateResponse(HttpStatusCode.OK);
-            await ok.WriteAsJsonAsync(updated);
-            return ok;
+            return await ApiResponseFactory.Success<Domain.Models.Specialty>(req, "Specialty", updated, ActionType.Updated);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

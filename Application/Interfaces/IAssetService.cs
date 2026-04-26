@@ -5,9 +5,9 @@ namespace MediHub.Application.Interfaces
 {
     public interface IAssetService
     {
-        Task<int> Create(Asset t);
+        Task<Asset> Create(Asset t);
         Task Delete(int id);
-        Task<int> Update(Asset t);
+        Task<Asset> Update(Asset t);
         Task<IEnumerable<Asset>> GetAll();
         Task<Asset> GetById(int id);
 

@@ -16,12 +16,6 @@ namespace MediHub.Application.Services
             _repository = repository;
         }
 
-
-        public async Task<IEnumerable<TemplateScheduleDTO>> GetMatrix(int week, int? facility, int? asset)
-        {
-            return await _repository.GetMatrix(week, facility, asset);
-        }
-
         public async Task<TemplateMatrixFormatAgg> GetMatrixFormat(int facilityId)
         {
             return await _repository.GetMatrixFormat(facilityId);
@@ -32,14 +26,14 @@ namespace MediHub.Application.Services
             return await _repository.GetByIdDTO(id);
         }
 
-        public async Task<TemplateDTO> CreateTemplateDTO(int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force)
+        public async Task<TemplateDTO> CreateTemplateDTO(int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force, int versionId)
         {
-            return await _repository.CreateTemplateDTO(sessionId, assetId, week, dayOfWeek, starTime, endTime, isOpen, force);
+            return await _repository.CreateTemplateDTO(sessionId, assetId, week, dayOfWeek, starTime, endTime, isOpen, force, versionId);
         }
 
-        public async Task<TemplateDTO> PutTemplateDTO(int id, int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force)
+        public async Task<TemplateDTO> PutTemplateDTO(int id, int sessionId, int assetId, int week, int dayOfWeek, TimeSpan starTime, TimeSpan endTime, bool isOpen, bool force, int versionId)
         {
-            return await _repository.PutTemplateDTO(id, sessionId, assetId, week, dayOfWeek, starTime, endTime, isOpen, force);
+            return await _repository.PutTemplateDTO(id, sessionId, assetId, week, dayOfWeek, starTime, endTime, isOpen, force, versionId);
         }
 
         public async Task Delete(int id)
@@ -57,9 +51,9 @@ namespace MediHub.Application.Services
             return await _repository.GetAllDTO();
         }
 
-        public async Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week)
+        public async Task<IEnumerable<TemplateDTO>> GetAllDTOByWeek(int week, int versionId)
         {
-            return await _repository.GetAllDTOByWeek(week);
+            return await _repository.GetAllDTOByWeek(week, versionId);
         }
 
         public async Task<Template> GetById(int id)
@@ -75,6 +69,12 @@ namespace MediHub.Application.Services
         public Task<int> Create(Template t)
         {
             return _repository.Create(t);
+        }
+
+
+        public Task<MatrixLayout> GetMatrixLayout()
+        {
+            return _repository.GetMatrixLayout();
         }
     }
 }

@@ -26,9 +26,10 @@ public class InstanceDTOCollectionByDate
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "get", "post", "options",
-            Route = "instances/detail/{startDate}/{endDate}")] HttpRequestData req,
+            Route = "instances/detail/{startDate}/{endDate}/{versionId}")] HttpRequestData req,
             string startDate,
             string endDate,
+            int versionId,
             FunctionContext context)
     {
         var log = context.GetLogger("InstanceDTOCollectionByDate");
@@ -38,7 +39,7 @@ public class InstanceDTOCollectionByDate
         {
             var ok = req.CreateResponse(HttpStatusCode.OK);
             
-            var instances = await _instanceService.GetAllDTOByDate(startDate, endDate);
+            var instances = await _instanceService.GetAllDTOByDate(startDate, endDate, versionId);
 
             // Log the first 10 instances
             var first10 = instances.Take(10);

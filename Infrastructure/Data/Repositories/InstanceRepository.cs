@@ -20,7 +20,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_START_DATETIME  AS StartDatetime,
                     INSTANCE_END_DATETIME    AS EndDatetime,
                     INSTANCE_IS_OPEN         AS IsOpen,
-                    INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId
+                    INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
+                    INSTANCE_VERSION_KEY AS VersionId
                 FROM dbo.instance";
 
             return await QueryAsync<Instance>(sql);
@@ -39,6 +40,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.INSTANCE_IS_OPEN AS IsOpen,
                     i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    i.INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
+                    i.INSTANCE_VERSION_KEY AS VersionId,
 
                     upd.STAFF_NAME AS LastUpdatedByUserName,
 
@@ -53,6 +56,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
                     sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
                     sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
+                    v.VERSION_NAME AS VersionName,
+                    v.VERSION_DESCRIPTION AS VersionDescription,
+                    V.VERSION_IS_ACTIVE AS VersionIsActive,
 
                     surgeon.STAFF_NAME AS SurgeonName,
 
@@ -181,6 +188,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.surgeon_type sty
                     ON sty.SURGEON_TYPE_KEY = s.SESSION_SURGEON_TYPE_KEY
 
+                LEFT JOIN dbo.version v
+                    ON v.VERSION_KEY = i.INSTANCE_VERSION_KEY
+
                 WHERE ist.STAFF_KEY = @StaffId
             ";
 
@@ -221,7 +231,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_START_DATETIME  AS StartDatetime,
                     INSTANCE_END_DATETIME    AS EndDatetime,
                     INSTANCE_IS_OPEN         AS IsOpen,
-                    INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId
+                    INSTANCE_SESSION_OVERRIDE_KEY AS SessionOverrideId,
+                    INSTANCE_VERSION_KEY     AS VersionId
                 FROM dbo.instance
                 WHERE INSTANCE_KEY = @Id";
 
@@ -244,6 +255,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_IS_OPEN,
                     INSTANCE_LAST_UPDATED_DATETIME,
                     INSTANCE_LAST_UPDATED_USER_KEY,
+                    INSTANCE_VERSION_KEY
                 FROM dbo.fnCheckInstanceConflict
                 (
                     @AssetKey,
@@ -273,7 +285,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_SESSION_KEY,
                     INSTANCE_START_DATETIME,
                     INSTANCE_END_DATETIME,
-                    INSTANCE_IS_OPEN
+                    INSTANCE_IS_OPEN,
+                    INSTANCE_VERSION_KEY
                 )
                 OUTPUT INSERTED.INSTANCE_KEY
                 VALUES (
@@ -281,7 +294,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @SessionId,
                     @StartDatetime,
                     @EndDatetime,
-                    @IsOpen
+                    @IsOpen,
+                    @VersionId
                 )";
 
             var id = await ExecuteScalarAsync<int>(sql, i);
@@ -301,19 +315,22 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_END_DATETIME,
                     INSTANCE_IS_OPEN,
                     INSTANCE_LAST_UPDATED_DATETIME,
-                    INSTANCE_LAST_UPDATED_USER_KEY
+                    INSTANCE_LAST_UPDATED_USER_KEY,
+                    INSTANCE_VERSION_KEY
                 FROM dbo.fnCheckInstanceConflict
                 (
                     @AssetKey,
                     @StartDateTime,
                     @EndDateTime,
-                    @IgnoreKey
+                    @IgnoreKey,
+                    @VersionKey
                 ) t",
                 new {
                     AssetKey = i.AssetId,
                     StartDateTime = i.StartDatetime,
                     EndDateTime = i.EndDatetime,
-                    IgnoreKey = i.Id
+                    IgnoreKey = i.Id,
+                    VersionKey = i.VersionId
                 }
             );
 
@@ -331,7 +348,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_SESSION_KEY = @SessionId,
                     INSTANCE_START_DATETIME = @StartDatetime,
                     INSTANCE_END_DATETIME = @EndDatetime,
-                    INSTANCE_IS_OPEN = @IsOpen
+                    INSTANCE_IS_OPEN = @IsOpen,
+                    INSTANCE_VERSION_KEY = @VersionId
                 WHERE INSTANCE_KEY = @Id";
 
             var id = await ExecuteAsync(sql, i);
@@ -376,6 +394,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.INSTANCE_IS_OPEN AS IsOpen,
                     i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    i.INSTANCE_VERSION_KEY AS VersionId,
 
                     upd.STAFF_NAME AS LastUpdatedByUserName,
 
@@ -390,6 +409,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
                     sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
                     sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
+                    v.VERSION_NAME AS VersionName,
+                    v.VERSION_DESCRIPTION AS VersionDescription,
+                    V.VERSION_IS_ACTIVE AS VersionIsActive,
 
                     surgeon.STAFF_NAME AS SurgeonName,
 
@@ -514,6 +537,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.anaesthetic_type at
                     ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
 
+                LEFT JOIN dbo.version v
+                    ON v.VERSION_KEY = i.INSTANCE_VERSION_KEY
+
                 
             ";
             
@@ -543,7 +569,7 @@ namespace MediHub.Infrastructure.Data.Repositories
             return lookup.Values;
         }
 
-        public async Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate)
+        public async Task<IEnumerable<InstanceDTO>> GetAllDTOByDate(string startDate, string endDate, int versionId)
         {
             const string sql = @"
                 SELECT
@@ -557,6 +583,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.INSTANCE_IS_OPEN AS IsOpen,
                     i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    i.INSTANCE_VERSION_KEY AS VersionId,
 
                     upd.STAFF_NAME AS LastUpdatedByUserName,
 
@@ -571,6 +598,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
                     sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
                     sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
+                    v.VERSION_NAME AS VersionName,
+                    v.VERSION_DESCRIPTION AS VersionDescription,
+                    V.VERSION_IS_ACTIVE AS VersionIsActive,
                     
                     surgeon.STAFF_NAME AS SurgeonName,
 
@@ -699,10 +730,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.role r
                     ON r.ROLE_KEY = ist.ROLE_KEY
 
+                LEFT JOIN dbo.version v
+                    ON v.VERSION_KEY = i.INSTANCE_VERSION_KEY
+
                 WHERE
                     i.INSTANCE_START_DATETIME >= @StartDate
                 AND
                     i.INSTANCE_START_DATETIME < @EndDate
+                AND
+                i.INSTANCE_VERSION_KEY = @VersionId
             ";
 
             var lookup = new Dictionary<int, InstanceDTO>();
@@ -728,7 +764,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 new
                 {
                     StartDate = startDate,
-                    EndDate = endDate
+                    EndDate = endDate,
+                    VersionId = versionId
                 },
                 splitOn: "StaffId"
             );
@@ -755,13 +792,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @AssetKey,
                     @StartDateTime,
                     @EndDateTime,
-                    @IgnoreKey
+                    @IgnoreKey,
+                    @VersionKey
                 ) t",
                 new {
                     AssetKey = i.AssetId,
                     StartDateTime = i.StartDatetime,
                     EndDateTime = i.EndDatetime,
-                    IgnoreKey = (int?)null
+                    IgnoreKey = (int?)null,
+                    VersionKey = i.VersionId
                 }
             );
 
@@ -781,7 +820,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_END_DATETIME,
                     INSTANCE_IS_OPEN,
                     INSTANCE_LAST_UPDATED_DATETIME,
-                    INSTANCE_LAST_UPDATED_USER_KEY
+                    INSTANCE_LAST_UPDATED_USER_KEY,
+                    INSTANCE_VERSION_KEY
                 )
                 VALUES (
                     @SessionId,
@@ -790,7 +830,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @EndDatetime,
                     @IsOpen,
                     @LastUpdatedDatetime,
-                    @LastUpdatedByUserId
+                    @LastUpdatedByUserId,
+                    @VersionId
                 );
                 SELECT CAST(SCOPE_IDENTITY() as int);
             ";
@@ -803,7 +844,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 EndDatetime = i.EndDatetime,
                 i.IsOpen,
                 i.LastUpdatedDatetime,
-                i.LastUpdatedByUserId
+                i.LastUpdatedByUserId,
+                i.VersionId
             };
 
             // Returns the new INSTANCE_KEY
@@ -850,6 +892,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.INSTANCE_IS_OPEN AS IsOpen,
                     i.INSTANCE_LAST_UPDATED_DATETIME AS LastUpdatedDatetime,
                     i.INSTANCE_LAST_UPDATED_USER_KEY AS LastUpdatedByUserId,
+                    i.INSTANCE_VERSION_KEY AS VersionId,
 
                     upd.STAFF_NAME AS LastUpdatedByUserName,
 
@@ -865,6 +908,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     s.SESSION_SURGEON_TYPE_KEY AS SurgeonTypeId,
                     sty.SURGEON_TYPE_CODE AS SurgeonTypeCode,
                     sty.SURGEON_TYPE_DESCRIPTION AS SurgeonTypeDescription,
+
+                    v.VERSION_NAME AS VersionName,
+                    v.VERSION_DESCRIPTION AS VersionDescription,
+                    v.VERSION_IS_ACTIVE AS VersionIsActive,
 
                     surgeon.STAFF_NAME AS SurgeonName,
 
@@ -994,6 +1041,9 @@ namespace MediHub.Infrastructure.Data.Repositories
                 LEFT JOIN dbo.anaesthetic_type at
                     ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
 
+                LEFT JOIN dbo.version v
+                    ON v.VERSION_KEY = i.INSTANCE_VERSION_KEY
+
                 WHERE i.INSTANCE_KEY = @Id
             ";
 
@@ -1043,13 +1093,15 @@ namespace MediHub.Infrastructure.Data.Repositories
                     @AssetKey,
                     @StartDateTime,
                     @EndDateTime,
-                    @IgnoreKey
+                    @IgnoreKey,
+                    @VersionKey
                 ) t",
                 new {
                     AssetKey = i.AssetId,
                     StartDateTime = i.StartDatetime,
                     EndDateTime = i.EndDatetime,
-                    IgnoreKey = i.Id
+                    IgnoreKey = i.Id,
+                    VersionKey = i.VersionId
                 }
             );
 
@@ -1070,7 +1122,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                     INSTANCE_END_DATETIME = @EndDatetime,
                     INSTANCE_IS_OPEN = @IsOpen,
                     INSTANCE_LAST_UPDATED_DATETIME = @LastUpdatedDatetime,
-                    INSTANCE_LAST_UPDATED_USER_KEY = @LastUpdatedByUserId
+                    INSTANCE_LAST_UPDATED_USER_KEY = @LastUpdatedByUserId,
+                    INSTANCE_VERSION_KEY = @VersionId
                 WHERE INSTANCE_KEY = @Id;
             ";
 
@@ -1083,7 +1136,8 @@ namespace MediHub.Infrastructure.Data.Repositories
                 EndDatetime = i.EndDatetime,
                 i.IsOpen,
                 i.LastUpdatedDatetime,
-                i.LastUpdatedByUserId
+                i.LastUpdatedByUserId,
+                i.VersionId
             };
 
             await ExecuteAsync(sql, parameters);
@@ -1140,7 +1194,7 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date)
+        public async Task<InstanceMatrixFacilityDTO[]> GetAllWeekMatrix(DateOnly date, int versionId)
         {
             var startDate = date.ToDateTime(TimeOnly.MinValue);
             var endDate = date.AddDays(7).ToDateTime(TimeOnly.MaxValue);
@@ -1153,12 +1207,7 @@ namespace MediHub.Infrastructure.Data.Repositories
                     a.ASSET_KEY AS AssetId,
                     a.ASSET_DESCRIPTION AS AssetDescription,
 
-                    i.INSTANCE_KEY AS Id,   -- MUST MATCH DTO
-                    f.FACILITY_KEY AS FacilityId,
-                    f.FACILITY_NAME AS FacilityName,
-                    a.ASSET_KEY AS AssetId,
-                    a.ASSET_DESCRIPTION AS AssetDescription,
-
+                    i.INSTANCE_KEY AS Id,
                     i.INSTANCE_SESSION_KEY AS SessionId,
                     s.SESSION_TITLE AS SessionTitle,
                     s.SESSION_IS_ACUTE AS IsAcute,
@@ -1174,9 +1223,10 @@ namespace MediHub.Infrastructure.Data.Repositories
                     i.INSTANCE_END_DATETIME AS EndDateTime,
                     i.INSTANCE_IS_OPEN AS IsOpen,
 
-                    (SELECT COUNT(*) 
-                    FROM INSTANCE_STAFF ist 
-                    WHERE ist.INSTANCE_KEY = i.INSTANCE_KEY) AS StaffCount,
+                    i.INSTANCE_VERSION_KEY AS VersionId,
+                    v.VERSION_NAME AS VersionName,
+                    v.VERSION_DESCRIPTION AS VersionDescription,
+                    v.VERSION_IS_ACTIVE AS VersionIsActive,
 
                     CASE 
                         WHEN i.INSTANCE_SESSION_OVERRIDE_KEY IS NULL THEN 0
@@ -1188,25 +1238,32 @@ namespace MediHub.Infrastructure.Data.Repositories
                             (CASE WHEN so.SESSION_OVERRIDE_SUBSPECIALTY_KEY IS NOT NULL THEN 1 ELSE 0 END) +
                             (CASE WHEN so.SESSION_OVERRIDE_SURGEON_KEY IS NOT NULL THEN 1 ELSE 0 END) +
                             (CASE WHEN so.SESSION_OVERRIDE_SURGEON_TYPE_KEY IS NOT NULL THEN 1 ELSE 0 END)
-                    END AS SessionOverrideCount,
+                    END AS SessionOverrideCount
 
-                FROM FACILITY f
+                FROM dbo.facility f
 
-                INNER JOIN ASSET a 
+                INNER JOIN dbo.asset a 
                     ON a.ASSET_FACILITY_KEY = f.FACILITY_KEY
 
-                LEFT JOIN INSTANCE i 
+                LEFT JOIN dbo.instance i 
                     ON i.INSTANCE_ASSET_KEY = a.ASSET_KEY
                     AND i.INSTANCE_START_DATETIME BETWEEN @startDate AND @endDate
+                    AND i.INSTANCE_VERSION_KEY = @VersionId
 
-                LEFT JOIN SESSION s 
+                LEFT JOIN dbo.session s 
                     ON s.SESSION_KEY = i.INSTANCE_SESSION_KEY
 
-                LEFT JOIN STAFF st 
+                LEFT JOIN dbo.staff st 
                     ON st.STAFF_KEY = s.SESSION_SURGEON_KEY
 
-                LEFT JOIN ANAESTHETIC_TYPE at
+                LEFT JOIN dbo.anaesthetic_type at
                     ON at.ANAESTHETIC_TYPE_KEY = s.SESSION_ANAESTHETIC_TYPE_KEY
+
+                LEFT JOIN dbo.session_override so
+                    ON so.SESSION_OVERRIDE_KEY = i.INSTANCE_SESSION_OVERRIDE_KEY
+
+                LEFT JOIN dbo.version v
+                    ON v.VERSION_KEY = i.INSTANCE_VERSION_KEY
 
                 ORDER BY 
                     f.FACILITY_NAME,
@@ -1282,7 +1339,7 @@ namespace MediHub.Infrastructure.Data.Repositories
 
                     return existingFacility;
                 },
-                new { startDate, endDate },
+                new { startDate, endDate, VersionId = versionId },
 
                 //--------------------------------------------------
                 // CRITICAL: splitOn must match SQL order

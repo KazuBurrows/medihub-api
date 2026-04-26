@@ -47,9 +47,7 @@ public class SubspecialtyCollection
 
             var created = await _subspecialtyService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.Subspecialty>(req, "Subspecialty", created, ActionType.Created);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

@@ -47,9 +47,7 @@ public class SurgeonTypeCollection
 
             var created = await _surgeonTypeService.Create(data!);
 
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(created);
-            return response;
+            return await ApiResponseFactory.Success<Domain.Models.SurgeonType>(req, "Surgeon Type", created, ActionType.Created);
         }
 
         return req.CreateResponse(HttpStatusCode.MethodNotAllowed);

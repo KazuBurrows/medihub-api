@@ -37,26 +37,28 @@ namespace MediHub.Infrastructure.Data.Repositories
         }
 
 
-        public async Task<int> Create(Role r)
+        public async Task<Role> Create(Role r)
         {
             const string sql = @"
                 INSERT INTO dbo.role (ROLE_NAME)
                 OUTPUT INSERTED.ROLE_KEY
                 VALUES (@Name)";
 
-            return await ExecuteScalarAsync<int>(sql, r);
+            var id = await ExecuteScalarAsync<int>(sql, r);
+            return await GetById(id);
         }
 
 
 
-        public async Task<int> Update(Role r)
+        public async Task<Role> Update(Role r)
         {
             const string sql = @"
                 UPDATE dbo.role
                 SET ROLE_NAME = @Name
                 WHERE ROLE_KEY = @Id";
 
-            return await ExecuteAsync(sql, r);
+            await ExecuteAsync(sql, r);
+            return await GetById(r.Id);
         }
 
 
